@@ -44,3 +44,53 @@ class SaveManager:
         return [{"name": x.name, "path": str(x)} 
                 for x in self.steamid_folder.iterdir() 
                 if x.is_dir() and x.name.startswith("SaveGame_")]
+
+    def load_save(self, save_path: Union[str, Path]) -> bool:
+        """Load a specific save folder"""
+        self.current_save = Path(save_path)
+        if not self.current_save.exists():
+            return False
+            
+        self.save_data = {}
+        try:
+            # Load key JSON files
+            self.save_data["game"] = self._load_json_file("Game.json")
+            self.save_data["money"] = self._load_json_file("Money.json")
+            self.save_data["rank"] = self._load_json_file("Rank.json")
+            self.save_data["time"] = self._load_json_file("Time.json")
+            self.save_data["metadata"] = self._load_json_file("Metadata.json")
+            
+            # Load other important data
+            self.save_data["properties"] = self._load_folder_data("Properties")
+            self.save_data["vehicles"] = self._load_folder_data("OwnedVehicles")
+            self.save_data["businesses"] = self._load_folder_data("Businesses")
+            
+            return True
+        except Exception as e:
+            print(f"Error loading save: {e}")
+            return False
+
+    def _load_json_file(self, filename: str) -> dict:
+        """Load a JSON file from the current save"""
+        file_path = self.current_save / filename
+        if not file_path.exists():
+            return {}
+            
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+
+    def _load_folder_data(self, folder_name: str) -> list:
+        """Load all JSON files from a subfolder"""
+        folder_path = self.current_save / folder_name
+        if not folder_path.exists():
+            return []
+            
+        data = []
+        for file in folder_path.glob("*.json"):
+            try:
+                with open(file, 'r', encoding='utf-8') as f:
+                    data.append(json.load(f))
+            except json.JSONDecodeError:
+                continue
+                
+        return data
