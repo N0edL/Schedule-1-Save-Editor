@@ -94,3 +94,17 @@ class SaveManager:
                 continue
                 
         return data
+
+    def get_save_info(self) -> dict:
+        """Get summary information about the loaded save"""
+        if not self.save_data:
+            return {}
+            
+        return {
+            "game_version": self.save_data.get("game", {}).get("GameVersion", "Unknown"),
+        }
+
+    def update_save_data(self, changes: dict) -> bool:
+        """Update save data with changes"""
+        # Still need to implement this :)_
+        pass
