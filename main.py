@@ -96,13 +96,9 @@ class SaveEditorMenu:
             return
 
         print(f"Game Version: {info.get('game_version', 'Unknown')}")
-        print(f"Money: ${info.get('money', 0):,.2f}")
-        print(f"Rank: {info.get('rank', 'Unknown')}")
-        print(f"Play Time: {self.format_playtime(info.get('play_time', 0))}")
-        print(f"Properties Owned: {info.get('properties_owned', 0)}")
-        print(f"Vehicles Owned: {info.get('vehicles_owned', 0)}")
-        print(f"Businesses Owned: {info.get('businesses_owned', 0)}")
-
+        print(f"Creation Date: {info.get('creation_date', 'Unknown')}")
+        print(f"Organisation Name: {info.get('organisation_name', 'Unknown')}")
+        print(f"Online Money: ${info.get('online_money', 0):,.2f}")
         self.press_enter_to_continue()
 
     def format_playtime(self, seconds: int) -> str:

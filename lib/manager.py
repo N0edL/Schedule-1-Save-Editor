@@ -19,7 +19,7 @@ class SaveManager:
         
         if not base_path.exists():
             return None
-            
+        
         steamid_folders = [
             f for f in base_path.iterdir() 
             if f.is_dir() and self._is_steamid_folder(f.name)
@@ -27,20 +27,20 @@ class SaveManager:
         
         if not steamid_folders:
             return None
-            
+        
         self.steamid_folder = steamid_folders[0]
         
         for item in self.steamid_folder.iterdir():
             if item.is_dir() and item.name.startswith("SaveGame_"):
                 return item
-                
+        
         return None
 
     def get_save_folders(self) -> List[Dict[str, str]]:
         """Get list of available save folders within the SteamID directory"""
         if not self.steamid_folder:
             return []
-            
+        
         return [{"name": x.name, "path": str(x)} 
                 for x in self.steamid_folder.iterdir() 
                 if x.is_dir() and x.name.startswith("SaveGame_")]
@@ -50,17 +50,14 @@ class SaveManager:
         self.current_save = Path(save_path)
         if not self.current_save.exists():
             return False
-            
+        
         self.save_data = {}
         try:
-            # Load key JSON files
             self.save_data["game"] = self._load_json_file("Game.json")
             self.save_data["money"] = self._load_json_file("Money.json")
             self.save_data["rank"] = self._load_json_file("Rank.json")
             self.save_data["time"] = self._load_json_file("Time.json")
             self.save_data["metadata"] = self._load_json_file("Metadata.json")
-            
-            # Load other important data
             self.save_data["properties"] = self._load_folder_data("Properties")
             self.save_data["vehicles"] = self._load_folder_data("OwnedVehicles")
             self.save_data["businesses"] = self._load_folder_data("Businesses")
@@ -75,7 +72,7 @@ class SaveManager:
         file_path = self.current_save / filename
         if not file_path.exists():
             return {}
-            
+        
         with open(file_path, 'r', encoding='utf-8') as f:
             return json.load(f)
 
@@ -84,7 +81,7 @@ class SaveManager:
         folder_path = self.current_save / folder_name
         if not folder_path.exists():
             return []
-            
+        
         data = []
         for file in folder_path.glob("*.json"):
             try:
@@ -92,16 +89,23 @@ class SaveManager:
                     data.append(json.load(f))
             except json.JSONDecodeError:
                 continue
-                
+        
         return data
 
     def get_save_info(self) -> dict:
         """Get summary information about the loaded save"""
         if not self.save_data:
             return {}
-            
+        
+        creation_date = self.save_data.get("metadata", {}).get("CreationDate", {})
+        formatted_date = f"{creation_date.get('Year', 'Unknown')}-{creation_date.get('Month', 'Unknown'):02d}-{creation_date.get('Day', 'Unknown'):02d} " \
+                f"{creation_date.get('Hour', 'Unknown'):02d}:{creation_date.get('Minute', 'Unknown'):02d}:{creation_date.get('Second', 'Unknown'):02d}"
+        
         return {
             "game_version": self.save_data.get("game", {}).get("GameVersion", "Unknown"),
+            "creation_date": formatted_date if creation_date else "Unknown",
+            "organisation_name": self.save_data.get("game", {}).get("OrganisationName", "Unknown"),
+            "online_money": self.save_data.get("money", {}).get("OnlineBalance", 0),
         }
 
     def update_save_data(self, changes: dict) -> bool:
