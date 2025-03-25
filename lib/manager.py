@@ -65,7 +65,6 @@ class SaveManager:
             self.save_data["game"] = self._load_json_file("Game.json")
             self.save_data["money"] = self._load_json_file("Money.json")
             self.save_data["rank"] = self._load_json_file("Rank.json")
-            self.save_data["time"] = self._load_json_file("Time.json")
             self.save_data["metadata"] = self._load_json_file("Metadata.json")
             self.save_data["properties"] = self._load_folder_data("Properties")
             self.save_data["vehicles"] = self._load_folder_data("OwnedVehicles")
@@ -101,6 +100,87 @@ class SaveManager:
         
         return data
 
+    def get_players_info(self, save_path: Optional[Path] = None) -> List[Dict]:
+        """Get detailed information about all players in the save"""
+        path = save_path or self.current_save
+        if not path:
+            return []
+
+        players_dir = path / "Players"
+        if not players_dir.exists():
+            return []
+
+        players = []
+        for player_dir in sorted(players_dir.iterdir()):
+            if player_dir.is_dir() and player_dir.name.startswith("Player_"):
+                player_data = self._load_player_data(player_dir)
+                if player_data:
+                    players.append(player_data)
+        return players
+
+    def _load_player_data(self, player_dir: Path) -> Optional[Dict]:
+        """Load all data for a specific player"""
+        try:
+            with open(player_dir / "Player.json", 'r', encoding='utf-8') as f:
+                player_json = json.load(f)
+            
+            return {
+                "id": player_dir.name,
+                "steam_id": player_json.get("PlayerCode"),
+                "name": self._get_steam_name(player_json.get("PlayerCode")),
+                "bank_balance": player_json.get("BankBalance", 0),
+                "appearance": self._load_json_file(player_dir / "Appearance.json"),
+                "clothing": self._load_json_file(player_dir / "Clothing.json"),
+                "inventory": self._parse_inventory(player_dir / "Inventory.json")
+            }
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(f"Error loading player data: {e}")
+            return None
+
+    def _parse_inventory(self, inventory_path: Path) -> List[Dict]:
+        """Parse the player's inventory into a structured format"""
+        inventory_data = self._load_json_file(inventory_path)
+        if not inventory_data:
+            return []
+
+        items = []
+        for item_str in inventory_data.get("Items", []):
+            try:
+                item = json.loads(item_str)
+                if item.get("Quantity", 0) <= 0:
+                    continue
+                    
+                items.append({
+                    "id": item.get("ID"),
+                    "name": self._get_item_name(item.get("ID")),
+                    "quantity": item.get("Quantity", 1),
+                    "type": item.get("DataType", "Item").replace("Data", ""),
+                    "quality": item.get("Quality", ""),
+                    "value": item.get("CashBalance", item.get("CurrentFillAmount", 0))
+                })
+            except json.JSONDecodeError:
+                continue
+        return items
+
+    def _get_steam_name(self, steam_id: Optional[str]) -> str:
+        """Convert SteamID to display name"""
+        return f"Steam User ({steam_id})" if steam_id else "Local Player"
+
+    def _get_item_name(self, item_id: str) -> str:
+        """Convert item ID to display name"""
+        item_names = {
+            "trimmers": "Trimmers",
+            "wateringcan": "Watering Can",
+            "speedgrow": "Speed-Grow",
+            "ogkush": "OG Kush",
+            "baggie": "Baggie",
+            "trashbag": "Trash Bag",
+            "cash": "Cash"
+            # Add more items as needed
+        }
+        return item_names.get(item_id, item_id.title())
+
+
     def get_save_info(self) -> dict:
         """Get summary information about the loaded save"""
         if not self.save_data:
@@ -114,7 +194,8 @@ class SaveManager:
             "game_version": self.save_data.get("game", {}).get("GameVersion", "Unknown"),
             "creation_date": formatted_date if creation_date else "Unknown",
             "organisation_name": self.save_data.get("game", {}).get("OrganisationName", "Unknown"),
-            "online_money": self.save_data.get("money", {}).get("OnlineBalance", 0),
+            "online_balance": self.save_data.get("money", {}).get("OnlineBalance", 0),
+            "networth": self.save_data.get("money", {}).get("NetWorth", 0)
         }
 
     def update_save_data(self, changes: dict) -> bool:
