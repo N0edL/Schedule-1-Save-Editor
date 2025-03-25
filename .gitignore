@@ -5,5 +5,8 @@
 dist/
 build/
 
+# Python cache
+__pycache__/
+
 # files
 pass
