@@ -35,13 +35,22 @@ class SaveManager:
                 return item
         
         return None
+    
+    def get_save_organisation_name(self, save_path: Path) -> str:
+        """Get the organisation name from a save folder"""
+        try:
+            with open(save_path / "Game.json") as f:
+                return json.load(f).get("OrganisationName", "Unknown Organization")
+        except (FileNotFoundError, json.JSONDecodeError):
+            return "Unknown Organization"
 
     def get_save_folders(self) -> List[Dict[str, str]]:
         """Get list of available save folders within the SteamID directory"""
         if not self.steamid_folder:
             return []
         
-        return [{"name": x.name, "path": str(x)} 
+        return [{"name": x.name, "path": str(x), 
+                "organisation_name": self.get_save_organisation_name(x)} 
                 for x in self.steamid_folder.iterdir() 
                 if x.is_dir() and x.name.startswith("SaveGame_")]
 

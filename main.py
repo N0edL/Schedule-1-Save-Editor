@@ -58,7 +58,7 @@ class SaveEditorMenu:
             return
 
         for i, save in enumerate(saves, 1):
-            print(f"{i}. {save['name']}")
+            print(f"{i}. {save['organisation_name']} - {save['name']}")
 
         print("\n0. Back to Main Menu")
         print()
