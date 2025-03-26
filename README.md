@@ -44,6 +44,7 @@ The **Schedule I Save File Editor** is a graphical user interface (GUI) tool des
 ## Requirements
 - **Python**
 - **PySide6**
+- **Rarfile**
 
 ## Installation
 1. Clone the repository:
