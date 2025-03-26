@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QStackedWidget, QWidget,
     QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QLabel, QFormLayout, QLineEdit, QComboBox, QPushButton,
-    QMessageBox, QTabWidget, QCheckBox, QGroupBox, QTextEdit
+    QMessageBox, QTabWidget, QCheckBox, QGroupBox, QTextEdit, QHeaderView
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QRegularExpressionValidator, QIntValidator
@@ -594,7 +594,7 @@ class NPCsTab(QWidget):
 class SaveEditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Schedule I Save Editor")
+        self.setWindowTitle("Schedule I Save File Editor")
         self.setGeometry(100, 100, 800, 600)
         self.manager = SaveManager()  # Assume SaveManager is defined elsewhere
         self.stacked_widget = QStackedWidget()
@@ -673,14 +673,43 @@ class SaveEditorWindow(QMainWindow):
 
         self.save_table = QTableWidget()
         self.save_table.setColumnCount(2)
-        self.save_table.setHorizontalHeaderLabels(["Organization Name", "Save Folders"])
+        self.save_table.setHorizontalHeaderLabels(["Organization Names", "Save Folders"])
         self.save_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.save_table.setSelectionMode(QTableWidget.SingleSelection)
-        self.save_table.horizontalHeader().setStretchLastSection(True)
+        self.save_table.horizontalHeader().setStyleSheet("""
+            QHeaderView::section {
+                background-color: #3c3f41;
+                color: #ffffff;
+                border: 1px solid #555555;
+                font-weight: normal;
+            }
+        """)
+        self.save_table.setStyleSheet("""
+            QTableWidget {
+                background-color: #3c3f41;
+                color: #ffffff;
+                gridline-color: #555555;
+                font-weight: normal;
+            }
+            QTableWidget::item {
+                border: 1px solid #555555;
+                padding: 4px;
+            }
+            QTableWidget::item:selected {
+                background-color: #5c5f61;
+                color: #ffffff;
+                font-weight: normal;
+            }
+        """)
 
+        self.save_table.horizontalHeader().setStretchLastSection(True)
+        self.save_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.save_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.save_table.setFocusPolicy(Qt.NoFocus)
+        self.save_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.save_table.setSelectionBehavior(QTableWidget.SelectRows)
         load_button = QPushButton("Load Selected Save")
         load_button.clicked.connect(self.load_selected_save)
-
         layout.addWidget(self.save_table)
         layout.addWidget(load_button)
         page.setLayout(layout)
@@ -691,9 +720,13 @@ class SaveEditorWindow(QMainWindow):
         saves = self.manager.get_save_folders()
         self.save_table.setRowCount(len(saves))
         for row, save in enumerate(saves):
-            self.save_table.setItem(row, 0, QTableWidgetItem(save['organisation_name']))
-            self.save_table.setItem(row, 1, QTableWidgetItem(save['name']))
-            self.save_table.item(row, 0).setData(Qt.UserRole, save['path'])
+            org_item = QTableWidgetItem(save['organisation_name'])
+            org_item.setFlags(org_item.flags() & ~Qt.ItemIsEditable)
+            org_item.setData(Qt.UserRole, save['path'])
+            folder_item = QTableWidgetItem(save['name'])
+            folder_item.setFlags(folder_item.flags() & ~Qt.ItemIsEditable)
+            self.save_table.setItem(row, 0, org_item)
+            self.save_table.setItem(row, 1, folder_item)
         self.save_table.resizeColumnsToContents()
 
     def load_selected_save(self):
@@ -778,7 +811,7 @@ class SaveEditorWindow(QMainWindow):
             tab_widget.addTab(self.properties_tab, "Properties")
             # tab_widget.addTab(self.unlocks_tab, "Unlocks")
             tab_widget.addTab(self.misc_tab, "Misc")
-            tab_widget.addTab(self.npcs_tab, "NPCs")
+            # tab_widget.addTab(self.npcs_tab, "NPCs")
 
             layout.addWidget(tab_widget)
 
