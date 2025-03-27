@@ -79,7 +79,7 @@ If scanned on [VirusTotal](https://www.virustotal.com/), the executable may be f
 **Note:** The editor automatically creates backups before applying changes. It’s still recommended to manually back up your save files before editing.
 
 ## Requirements
-- **Python** (3.x recommended)
+- **Python**
 - **PySide6**
 
 ## Installation
@@ -88,4 +88,4 @@ If scanned on [VirusTotal](https://www.virustotal.com/), the executable may be f
 
 2. **Install Dependencies:**
    ```sh
-   pip install PySide6
+   git clone https://github.com/N0edL/Schedule-1-Save-Editor.git
