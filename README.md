@@ -23,12 +23,12 @@ The **Schedule I Save File Editor** is a graphical user interface (GUI) tool des
   - **Properties:** 
     - Update item quantities (0-1,000,000), qualities (Trash, Poor, Standard, Premium, Heavenly), and packaging (none, baggie, jar).
     - Apply changes to weed, items, or both across selected or all properties.
-    - Unlock all properties by downloading and enabling all property types.
   - **Products:**
     - Discover or undiscover products like cocaine and meth.
     - Generate custom products with specified quantities, ID lengths, and prices.
   - **Unlocks:**
     - Unlock all items and weeds by setting rank and tier to 999.
+    - Unlock all properties by downloading and enabling all property types.
     - Unlock all businesses by downloading and enabling all business types.
     - Update NPC relationships and recruit dealers.
   - **Miscellaneous:**
