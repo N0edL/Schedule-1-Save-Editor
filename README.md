@@ -26,7 +26,23 @@ The **Schedule I Save File Editor** is a graphical user interface (GUI) tool des
     - Complete all quests and objectives.
     - Modify variables (booleans to "True," numerics to "999999999").
 
-- **Dark Theme:** Enhances visibility and user experience.
+## ⚠️ Antivirus Warnings (False Positives & VirusTotal Detection)
+Some antivirus programs may flag the executable (`.exe`) version of this application as a virus or malware. This is a **false positive** and happens because the application was converted from Python to an executable using **PyInstaller**. Many antivirus programs incorrectly classify such files as malicious, even when they are completely safe.
+
+### ⚠️ VirusTotal Detection
+If you scanned the file on [VirusTotal](https://www.virustotal.com/) and it was flagged by some antivirus engines, keep in mind that this is due to how PyInstaller packages the application. Some security software marks all PyInstaller executables as suspicious, even when there is no harmful code.
+
+### ✅ How to Use the Application Safely
+1. **Review the Source Code**
+   - This project is **open-source**, meaning you can inspect the code yourself before running it.
+2. **Use the Python Version**
+   - If you prefer, you can run the Python version directly instead of using the `.exe` file. Just clone the repository and install the required dependencies.
+3. **Whitelist the Application in Your Antivirus**
+   - If your antivirus blocks it, you can manually add an exception to allow it.
+
+⚠️ *This project does **not** contain any malware or harmful code. If you have concerns, please check the source code and run the Python version instead.*
+
+
 
 ## Usage
 1. **Select a Save:**
