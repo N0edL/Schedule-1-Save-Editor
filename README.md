@@ -60,7 +60,6 @@ If you scanned the file on [VirusTotal](https://www.virustotal.com/) and it was 
 ## Requirements
 - **Python**
 - **PySide6**
-- **Rarfile**
 
 ## Installation
 1. Clone the repository:
