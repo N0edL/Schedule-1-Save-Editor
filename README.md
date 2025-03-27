@@ -61,7 +61,7 @@ The **Schedule I Save File Editor** is a graphical user interface (GUI) tool des
   - 🔓 One-click unlocks:
     - All items/weeds (Rank 999)
     - Complete property collection
-    - Unlock all business types
+    - Unlock all business/properties types
     - Max NPC relationships
   - Quest Management:
     - Instant complete all quests
