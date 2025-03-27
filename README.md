@@ -89,3 +89,4 @@ If scanned on [VirusTotal](https://www.virustotal.com/), the executable may be f
 2. **Install Dependencies:**
    ```sh
    git clone https://github.com/N0edL/Schedule-1-Save-Editor.git
+   cd Schedule-1-Save-Editor
