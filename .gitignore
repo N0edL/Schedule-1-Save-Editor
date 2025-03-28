@@ -11,3 +11,6 @@ __pycache__/
 
 # files
 pass
+
+# Spec files
+*.spec

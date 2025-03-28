@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QRegularExpressionValidator, QIntValidator, QIcon
+import ctypes
 
 def find_steam_path():
     try:
@@ -1832,8 +1833,18 @@ class SaveEditorWindow(QMainWindow):
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
 
-        # Icon
-        self.setWindowIcon(QIcon("icon.ico"))
+        def resource_path(relative_path):
+            """ Get absolute path to resource, works for dev and for PyInstaller """
+            try:
+                # PyInstaller creates a temp folder and stores path in _MEIPASS
+                base_path = sys._MEIPASS
+            except Exception:
+                base_path = os.path.abspath(".")
+
+            return os.path.join(base_path, relative_path)
+
+        # Then set the icon using:
+        self.setWindowIcon(QIcon(resource_path("icon.ico")))
 
         # Create pages
         self.save_selection_page = self.create_save_selection_page()
