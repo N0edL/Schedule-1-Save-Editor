@@ -1,52 +1,128 @@
 # Schedule I Save File Editor
 
+![Banner](https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/3164500/header.jpg?t=1742853609) <!-- Add actual banner image if available -->
+
 ## Overview
-The **Schedule I Save File Editor** is a graphical user interface (GUI) tool designed to edit save files for the game "Schedule I." It enables users to select save files, view detailed information, and modify key game data such as money, rank, properties, and miscellaneous settings. Built with PySide6, it features a dark theme and a tabbed interface for a seamless editing experience.
+The **Schedule I Save File Editor** is a graphical user interface (GUI) tool designed to modify save files for the game "Schedule I." Built with PySide6, it features:
+
+- Dark theme interface with tabbed navigation
+- Advanced game data modification capabilities
+- Built-in backup system with version control
+- NPC relationship management tools
+- Safe editing workflow with automatic backups
 
 ## Features
+
+### Save Management
 - **Save Selection:**
-  - View a table of save files with organization names and folder names.
-  - Load a selected save to proceed.
+  - View all saves in a sortable table
+  - Display organization names and folder structures
+  - Load saves with one click
 
 - **Save Information:**
-  - Displays details about the selected save:
-    - Game version
-    - Creation date
-    - Organization name
-    - Online money, networth, lifetime earnings, weekly deposit sum
-    - Rank (current rank, rank number, tier)
-  - Navigate back to save selection or proceed to edit.
+  - Detailed save metadata display:
+    - Game version compatibility check
+    - Creation timestamp analysis
+    - Financial overview (money, networth, earnings)
+    - Rank progression tracking
 
-- **Edit Save Data:**
-  - **Money:** Modify online money, networth, lifetime earnings, and weekly deposit sum (up to 10-digit integers).
-  - **Rank:** Adjust current rank (Street, Dealer, Supplier, Distributor, Kingpin), rank number (0-100), and tier (0-100).
-  - **Properties:** Update item quantities (0-1,000,000), qualities (Trash to Heavenly), packaging (none, baggie, jar), and apply to weed/items/both across selected or all properties.
-  - **Miscellaneous:**
-    - Edit organization name.
-    - Complete all quests and objectives.
-    - Modify variables (booleans to "True," numerics to "999999999").
+### Editing Capabilities
+- **Core Modifications:**
+  - 💰 Money Editor: 
+    - Modify online balance (up to $999,999,999)
+    - Adjust networth and lifetime earnings
+    - Configure weekly deposit sums
+  
+  - 🏆 Rank System: 
+    - Set rank tier (Street → Kingpin)
+    - Modify numerical rank values (0-100)
+    - Customize tier progression
 
-- **Dark Theme:** Enhances visibility and user experience.
+- **Property Management:**
+  - Bulk edit item properties:
+    - Quantities (0-1,000,000 units)
+    - Quality levels (Trash ➔ Heavenly)
+    - Packaging types (Baggies/Jars)
+  - Apply changes to:
+    - Specific property types
+    - Weed/items/both categories
+    - All properties simultaneously
 
-## Usage
-1. **Select a Save:**
-   - Launch the editor to see a table of available saves.
-   - Select a save and click "Load Selected Save."
+- **Product System:**
+  - 🧪 Generate custom products:
+    - Customizable ID lengths (5-20 chars)
+    - Set market prices
+    - Add to discovery/listings
+  - Manage existing products:
+    - Discover/undiscover cocaine/meth
+    - Delete generated products
 
-2. **View Save Information:**
-   - Review the save details.
-   - Click "Back to Selection" to choose another save or "Edit Save" to modify it.
+- **Unlockables:**
+  - 🔓 One-click unlocks:
+    - All items/weeds (Rank 999)
+    - Complete property collection
+    - Unlock all business/properties types
+    - Unlock all NPCs
+  - Quest Management:
+    - Instant complete all quests
+    - Auto-finish objectives
 
-3. **Edit Save Data:**
-   - Use the tabs (Money, Rank, Properties, Misc) to adjust values.
-   - Enter data and click "Apply Changes" to save or "Cancel" to discard.
+- **NPC Tools:**
+  - 👥 NPC Generator:
+    - Create from game logs
+    - Recruit all dealers
+    - Max relationship levels
+  - Dealer Management:
+    - Bulk recruit dealers
+    - Configure dealer statuses
 
-## Requirements
-- **Python**
-- **PySide6**
-- **Rarfile**
+### Safety Features
+- 🔄 Backup System:
+  - Automatic initial backups
+  - Feature-specific versioning
+  - One-click restore points
+  - Bulk backup deletion
 
-## Installation
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/N0edL/Schedule-1-Save-Editor.git
+### Utilities
+- 🛠️ Advanced Tools:
+  - Organization name editor
+  - Variable modifier (bool/numeric)
+  - Achievement Unlocker mod installer
+  - New save generator (5 slot limit)
+
+## ⚠️ Security Notes
+
+### Antivirus Considerations
+Some security solutions may flag the `.exe` version due to:
+- PyInstaller packaging
+- Memory editing capabilities
+- Unusual file operations
+
+| Security Aspect       | Recommendation                |
+|-----------------------|-------------------------------|
+| False Positives       | Whitelist in antivirus        |
+| Source Verification   | Review code on GitHub         |
+| Safe Alternative      | Use Python version directly   |
+
+### Verification Steps
+1. Check [VirusTotal analysis](https://www.virustotal.com/)
+2. Compare hashes with GitHub release
+3. Inspect source code integrity
+
+## 🚀 Getting Started
+
+### Requirements
+- Python 3.9+
+- PySide6 library
+
+### Installation
+```bash
+# Clone repository
+git clone https://github.com/N0edL/Schedule-1-Save-Editor.git
+cd Schedule-1-Save-Editor
+
+# Install dependencies
+pip install PySide6
+
+# Launch editor
+python main.py
