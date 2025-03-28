@@ -1,6 +1,7 @@
 # Schedule I Save File Editor
 
-![Banner](https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/3164500/header.jpg?t=1742853609) <!-- Add actual banner image if available -->
+![Banner](https://github.com/user-attachments/assets/55a8e085-f339-49cb-8ea6-31a5945d4095)
+
 
 ## Overview
 The **Schedule I Save File Editor** is a graphical user interface (GUI) tool designed to modify save files for the game "Schedule I." Built with PySide6, it features:
