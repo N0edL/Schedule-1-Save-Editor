@@ -225,7 +225,7 @@ class SaveManager:
             data = {
                 "DataType": "ProductManagerData",
                 "DataVersion": 0,
-                "GameVersion": "0.2.9f4",
+                "GameVersion": "0.3.3f11",
                 "DiscoveredProducts": [],
                 "ListedProducts": [],
                 "ActiveMixOperation": {"ProductID": "", "IngredientID": ""},
@@ -255,7 +255,7 @@ class SaveManager:
             data = {
                 "DataType": "ProductManagerData",
                 "DataVersion": 0,
-                "GameVersion": "0.2.9f4",
+                "GameVersion": "0.3.3f11",
                 "DiscoveredProducts": [],
                 "ListedProducts": [],
                 "ActiveMixOperation": {"ProductID": "", "IngredientID": ""},
@@ -293,7 +293,7 @@ class SaveManager:
             prices.append({"String": product_id, "Int": price})
             properties = random.sample(property_pool, 7)
             product_data = {
-                "DataType": "WeedProductData", "DataVersion": 0, "GameVersion": "0.2.9f4",
+                "DataType": "WeedProductData", "DataVersion": 0, "GameVersion": "0.3.3f11",
                 "Name": product_id, "ID": product_id, "DrugType": 0, "Properties": properties,
                 "AppearanceSettings": {
                     "MainColor": {"r": random.randint(0, 255), "g": random.randint(0, 255), "b": random.randint(0, 255), "a": 255},
