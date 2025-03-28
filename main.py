@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QMessageBox, QTabWidget, QCheckBox, QGroupBox, QTextEdit, QHeaderView, QDialog
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QRegularExpressionValidator, QIntValidator
+from PySide6.QtGui import QRegularExpressionValidator, QIntValidator, QIcon
 
 def find_steam_path():
     try:
@@ -1667,7 +1667,7 @@ class MiscTab(QWidget):
             self.main_window.populate_save_table()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate new save folder: {str(e)}")
- 
+
 class NPCsTab(QWidget):
     def __init__(self, parent=None, main_window=None):
         super().__init__(parent)
@@ -1831,6 +1831,9 @@ class SaveEditorWindow(QMainWindow):
         self.manager = SaveManager()  # Assume SaveManager is defined elsewhere
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
+
+        # Icon
+        self.setWindowIcon(QIcon("icon.ico"))
 
         # Create pages
         self.save_selection_page = self.create_save_selection_page()
