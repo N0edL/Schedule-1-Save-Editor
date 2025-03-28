@@ -14,3 +14,7 @@ pass
 
 # Spec files
 *.spec
+
+# txt files
+*.txt
+*.log
