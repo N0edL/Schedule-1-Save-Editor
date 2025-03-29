@@ -210,7 +210,7 @@ class SaveManager:
                 try:
                     item = json.loads(item_str)
                     if item.get("DataType") == "CashData":
-                        cash_balance = item.get("CashBalance", 0)
+                        cash_balance = int(item.get("CashBalance", 0))  # Ensure cash balance is an integer
                         break
                 except json.JSONDecodeError:
                     continue
@@ -228,7 +228,7 @@ class SaveManager:
             "current_rank": rank_data.get("CurrentRank", "Unknown"),
             "rank_number": int(rank_data.get("Rank", 0)),
             "tier": int(rank_data.get("Tier", 0)),
-            "cash_balance": cash_balance
+            "cash_balance": cash_balance  # Ensure cash balance is an integer
         }
 
     def _save_json_file(self, filename: str, data: dict):
