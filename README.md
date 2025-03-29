@@ -14,82 +14,39 @@ The **Schedule I Save File Editor** is a graphical user interface (GUI) tool des
 
 ## Features
 
-### Save Management
-- **Save Selection:**
-  - View all saves in a sortable table
-  - Display organization names and folder structures
-  - Load saves with one click
+### 💰 Financial Control
+- Edit online money balance, net worth, lifetime earnings, and weekly deposits
+- Modify cash balance directly in player inventory
 
-- **Save Information:**
-  - Detailed save metadata display:
-    - Game version compatibility check
-    - Creation timestamp analysis
-    - Financial overview (money, networth, earnings)
-    - Rank progression tracking
+### 📈 Rank & Progression
+- Adjust organization name, current rank, rank number, and tier
+- Unlock all items/weeds by maxing rank (999)
 
-### Editing Capabilities
-- **Core Modifications:**
-  - 💰 Money Editor: 
-    - Modify online balance (up to $999,999,999)
-    - Adjust networth and lifetime earnings
-    - Configure weekly deposit sums
-  
-  - 🏆 Rank System: 
-    - Set rank tier (Street → Kingpin)
-    - Modify numerical rank values (0-100)
-    - Customize tier progression
+### 🧪 Product Management
+- Discover/undiscover cocaine and meth
+- Generate custom products with unique IDs/names, properties, and pricing
+- Bulk delete generated products
 
-- **Property Management:**
-  - Bulk edit item properties:
-    - Quantities (0-1,000,000 units)
-    - Quality levels (Trash ➔ Heavenly)
-    - Packaging types (Baggies/Jars)
-  - Apply changes to:
-    - Specific property types
-    - Weed/items/both categories
-    - All properties simultaneously
+### 🏠 Property & Business
+- Set quantities/quality for all properties
+- Unlock all properties and businesses with one click
+- Modify storage container contents (weed/items)
 
-- **Product System:**
-  - 🧪 Generate custom products:
-    - Customizable ID lengths (5-20 chars)
-    - Set market prices
-    - Add to discovery/listings
-  - Manage existing products:
-    - Discover/undiscover cocaine/meth
-    - Delete generated products
+### 🤝 NPC Relationships
+- Import NPCs from game logs
+- Recruit all dealers instantly
+- Max relationship levels with all NPCs
 
-- **Unlockables:**
-  - 🔓 One-click unlocks:
-    - All items/weeds (Rank 999)
-    - Complete property collection
-    - Unlock all business/properties types
-    - Unlock all NPCs
-  - Quest Management:
-    - Instant complete all quests
-    - Auto-finish objectives
+### 🔄 Backup & Restore
+- Automatic initial backup
+- Feature-specific versioning
+- Full restore capability
 
-- **NPC Tools:**
-  - 👥 NPC Generator:
-    - Create from game logs
-    - Recruit all dealers
-    - Max relationship levels
-  - Dealer Management:
-    - Bulk recruit dealers
-    - Configure dealer statuses
-
-### Safety Features
-- 🔄 Backup System:
-  - Automatic initial backups
-  - Feature-specific versioning
-  - One-click restore points
-  - Bulk backup deletion
-
-### Utilities
-- 🛠️ Advanced Tools:
-  - Organization name editor
-  - Variable modifier (bool/numeric)
-  - Achievement Unlocker mod installer
-  - New save generator (5 slot limit)
+### ⚙️ Advanced Tools
+- Complete all quests/objectives
+- Toggle boolean variables
+- Install achievement unlocker mod
+- Generate new save files
 
 ## ⚠️ Security Notes
 
