@@ -19,8 +19,7 @@ from PySide6.QtWidgets import (
     QMessageBox, QTabWidget, QCheckBox, QGroupBox, QTextEdit, QHeaderView, QDialog
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QRegularExpressionValidator, QIntValidator, QIcon
-import ctypes
+from PySide6.QtGui import QRegularExpressionValidator, QIntValidator
 
 def find_steam_path():
     try:
@@ -117,6 +116,8 @@ class SaveManager:
             self.save_data["properties"] = self._load_folder_data("Properties")
             self.save_data["vehicles"] = self._load_folder_data("OwnedVehicles")
             self.save_data["businesses"] = self._load_folder_data("Businesses")
+            # Add loading of Player_0's Inventory.json
+            self.save_data["inventory"] = self._load_json_file("Players/Player_0/Inventory.json")
             # Set backup paths
             self.backup_path = self.current_save.parent / (self.current_save.name + '_Backup')
             self.feature_backups = self.backup_path / 'feature_backups'
@@ -151,10 +152,23 @@ class SaveManager:
             return {}
         creation_date = self.save_data.get("metadata", {}).get("CreationDate", {})
         formatted_date = (f"{creation_date.get('Year', 'Unknown')}-{creation_date.get('Month', 'Unknown'):02d}-"
-                          f"{creation_date.get('Day', 'Unknown'):02d} {creation_date.get('Hour', 'Unknown'):02d}:"
-                          f"{creation_date.get('Minute', 'Unknown'):02d}:{creation_date.get('Second', 'Unknown'):02d}")
+                        f"{creation_date.get('Day', 'Unknown'):02d} {creation_date.get('Hour', 'Unknown'):02d}:"
+                        f"{creation_date.get('Minute', 'Unknown'):02d}:{creation_date.get('Second', 'Unknown'):02d}")
         money_data = self.save_data.get("money", {})
         rank_data = self.save_data.get("rank", {})
+        
+        # Extract cash_balance from the Items list
+        cash_balance = 0
+        if "inventory" in self.save_data and "Items" in self.save_data["inventory"]:
+            for item_str in self.save_data["inventory"]["Items"]:
+                try:
+                    item = json.loads(item_str)
+                    if item.get("DataType") == "CashData":
+                        cash_balance = item.get("CashBalance", 0)
+                        break
+                except json.JSONDecodeError:
+                    continue
+        
         return {
             "game_version": self.save_data.get("game", {}).get("GameVersion", "Unknown"),
             "creation_date": formatted_date if creation_date else "Unknown",
@@ -166,6 +180,7 @@ class SaveManager:
             "current_rank": rank_data.get("CurrentRank", "Unknown"),
             "rank_number": int(rank_data.get("Rank", 0)),
             "tier": int(rank_data.get("Tier", 0)),
+            "cash_balance": cash_balance  # Updated value
         }
 
     def _save_json_file(self, filename: str, data: dict):
@@ -242,15 +257,19 @@ class SaveManager:
         with open(products_json, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
 
-    def generate_products(self, count: int, id_length: int, price: int, add_to_listed: bool = False):
+    def generate_products(self, count: int, id_length: int, price: int, add_to_listed: bool = False, add_to_favourited: bool = False):
         products_path = self.current_save / "Products"
         os.makedirs(products_path, exist_ok=True)
         created_path = products_path / "CreatedProducts"
         os.makedirs(created_path, exist_ok=True)
 
-        products_json = products_path / "Products.json"
+        # Define the relative path to Products.json
+        products_rel_path = "Products/Products.json"
+        products_json = self.current_save / products_rel_path
+
+        # Load existing data using the relative path
         if products_json.exists():
-            data = self._load_json_file(products_json.name)
+            data = self._load_json_file(products_rel_path)
         else:
             data = {
                 "DataType": "ProductManagerData",
@@ -261,19 +280,23 @@ class SaveManager:
                 "ActiveMixOperation": {"ProductID": "", "IngredientID": ""},
                 "IsMixComplete": False,
                 "MixRecipes": [],
-                "ProductPrices": []
+                "ProductPrices": [],
+                "FavouritedProducts": []
             }
 
         discovered = data.setdefault("DiscoveredProducts", [])
         mix_recipes = data.setdefault("MixRecipes", [])
         prices = data.setdefault("ProductPrices", [])
         listed_products = data.setdefault("ListedProducts", [])
+        favourited_products = data.setdefault("FavouritedProducts", [])
 
         property_pool = ["athletic", "balding", "gingeritis", "spicy", "jennerising", "thoughtprovoking",
                         "tropicthunder", "giraffying", "longfaced", "sedating", "smelly", "paranoia", "laxative",
-                        "caloriedense", "energizing"]
+                        "caloriedense", "energizing", "calming", "brighteyed", "foggy", "glowing", "antigravity",
+                        "slippery", "munchies", "explosive", "refreshing", "shrinking", "euphoric", "disorienting",
+                        "toxic", "zombifying", "cyclopean", "seizureinducing"]
         ingredients = ["flumedicine", "gasoline", "mouthwash", "horsesemen", "iodine", "chili", "paracetamol",
-                    "energydrink", "donut", "banana", "viagra", "cuke", "motoroil"]
+                    "energydrink", "donut", "banana", "viagra", "cuke", "motoroil", "addy", "megabean", "battery"]
         product_set = set(discovered)
         new_products = []
 
@@ -291,10 +314,15 @@ class SaveManager:
             ingredient = random.choice(ingredients)
             mix_recipes.append({"Product": ingredient, "Mixer": mixer, "Output": product_id})
             prices.append({"String": product_id, "Int": price})
-            properties = random.sample(property_pool, 7)
+            properties = random.sample(property_pool, 8)
             product_data = {
-                "DataType": "WeedProductData", "DataVersion": 0, "GameVersion": "0.3.3f11",
-                "Name": product_id, "ID": product_id, "DrugType": 0, "Properties": properties,
+                "DataType": "WeedProductData",
+                "DataVersion": 0,
+                "GameVersion": "0.3.3f11",
+                "Name": product_id,
+                "ID": product_id,
+                "DrugType": 0,
+                "Properties": properties,
                 "AppearanceSettings": {
                     "MainColor": {"r": random.randint(0, 255), "g": random.randint(0, 255), "b": random.randint(0, 255), "a": 255},
                     "SecondaryColor": {"r": random.randint(0, 255), "g": random.randint(0, 255), "b": random.randint(0, 255), "a": 255},
@@ -302,12 +330,18 @@ class SaveManager:
                     "StemColor": {"r": random.randint(0, 255), "g": random.randint(0, 255), "b": random.randint(0, 255), "a": 255}
                 }
             }
-            self._save_json_file(created_path / f"{product_id}.json", product_data)
+            # Save individual product file using the correct relative path
+            product_rel_path = f"Products/CreatedProducts/{product_id}.json"
+            self._save_json_file(product_rel_path, product_data)
 
         if add_to_listed:
             listed_products.extend(new_products)
 
-        self._save_json_file(products_json.name, data)
+        if add_to_favourited:
+                    favourited_products.extend(new_products)
+
+        # Save the updated data using the relative path
+        self._save_json_file(products_rel_path, data)
 
     def update_property_quantities(self, property_type: str, quantity: int, 
                                 packaging: str, update_type: str, quality: str) -> int:
@@ -834,6 +868,27 @@ class SaveManager:
 
         return None
 
+    def set_cash_balance(self, new_balance: int):
+        if "inventory" in self.save_data:
+            inventory = self.save_data["inventory"]
+            if "Items" in inventory:
+                for i, item_str in enumerate(inventory["Items"]):
+                    try:
+                        item = json.loads(item_str)
+                        if item.get("DataType") == "CashData":
+                            item["CashBalance"] = new_balance
+                            inventory["Items"][i] = json.dumps(item)
+                            self._save_json_file("Players/Player_0/Inventory.json", inventory)
+                            return
+                    except json.JSONDecodeError:
+                        continue
+                else:
+                    print("No CashData item found in inventory.")
+            else:
+                print("No 'Items' key in inventory.")
+        else:
+            print("No 'inventory' in save_data.")
+
 class FeatureRevertDialog(QDialog):
     def __init__(self, parent=None, manager=None):
         super().__init__(parent)
@@ -915,6 +970,9 @@ class MoneyTab(QWidget):
         self.lifetime_earnings_input.setValidator(QRegularExpressionValidator(r"^\d{1,10}$"))
         self.weekly_deposit_sum_input = QLineEdit()
         self.weekly_deposit_sum_input.setValidator(QRegularExpressionValidator(r"^\d{1,10}$"))
+        self.cash_balance_input = QLineEdit()  # Added CashBalance input
+        self.cash_balance_input.setValidator(QRegularExpressionValidator(r"^\d{1,10}$"))
+        layout.addRow("Cash Balance:", self.cash_balance_input)  # Added to layout
         layout.addRow("Online Money:", self.money_input)
         layout.addRow("Networth:", self.networth_input)
         layout.addRow("Lifetime Earnings:", self.lifetime_earnings_input)
@@ -922,6 +980,7 @@ class MoneyTab(QWidget):
         self.setLayout(layout)
 
     def set_data(self, info):
+        self.cash_balance_input.setText(str(info.get("cash_balance", 0)))  # Added
         self.money_input.setText(str(info.get("online_money", 0)))
         self.networth_input.setText(str(info.get("networth", 0)))
         self.lifetime_earnings_input.setText(str(info.get("lifetime_earnings", 0)))
@@ -929,6 +988,7 @@ class MoneyTab(QWidget):
 
     def get_data(self):
         return {
+            "cash_balance": int(self.cash_balance_input.text()),
             "online_money": int(self.money_input.text()),
             "networth": int(self.networth_input.text()),
             "lifetime_earnings": int(self.lifetime_earnings_input.text()),
@@ -942,7 +1002,8 @@ class RankTab(QWidget):
         self.rank_combo = QComboBox()
         self.rank_combo.addItems(["Street", "Dealer", "Supplier", "Distributor", "Kingpin"])
         self.rank_number_input = QLineEdit()
-        self.rank_number_input.setValidator(QIntValidator(0, 100))
+        # Updated validator to allow up to 999
+        self.rank_number_input.setValidator(QIntValidator(0, 999))
         self.tier_input = QLineEdit()
         self.tier_input.setValidator(QIntValidator(0, 100))
         layout.addRow("Current Rank:", self.rank_combo)
@@ -1150,6 +1211,9 @@ class ProductsTab(QWidget):
         self.add_to_listed_checkbox = QCheckBox("Add to Listed Products")
         form_layout.addRow("", self.add_to_listed_checkbox)
 
+        self.add_to_favourited_checkbox = QCheckBox("Add to Favourited Products")
+        form_layout.addRow("", self.add_to_favourited_checkbox)
+
         generation_group.setLayout(form_layout)
 
         # **Buttons for Generation**
@@ -1239,13 +1303,14 @@ class ProductsTab(QWidget):
             id_length = int(self.id_length_input.text())
             price = int(self.price_input.text())
             add_to_listed = self.add_to_listed_checkbox.isChecked()
+            add_to_favourited = self.add_to_favourited_checkbox.isChecked()
 
             # Backup products
             products_path = self.main_window.manager.current_save / "Products"
             self.main_window.manager.create_feature_backup("Products", [products_path])
             self.main_window.backups_tab.refresh_backup_list()  # Add this line
 
-            self.main_window.manager.generate_products(count, id_length, price, add_to_listed)
+            self.main_window.manager.generate_products(count, id_length, price,add_to_listed, add_to_favourited)
             QMessageBox.information(self, "Success", f"Generated {count} products successfully!")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate products: {str(e)}")
@@ -1279,12 +1344,13 @@ class ProductsTab(QWidget):
                     with open(products_json, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                 else:
-                    data = {"DiscoveredProducts": [], "ListedProducts": [], "MixRecipes": [], "ProductPrices": []}
+                    data = {"DiscoveredProducts": [], "ListedProducts": [], "MixRecipes": [], "ProductPrices": [], "FavouritedProducts": []}
                 
                 data["DiscoveredProducts"] = [pid for pid in data.get("DiscoveredProducts", []) if pid not in generated_ids]
                 data["ListedProducts"] = [pid for pid in data.get("ListedProducts", []) if pid not in generated_ids]
                 data["MixRecipes"] = [recipe for recipe in data.get("MixRecipes", []) if recipe.get("Output") not in generated_ids]
                 data["ProductPrices"] = [price for price in data.get("ProductPrices", []) if price.get("String") not in generated_ids]
+                data["FavouritedProducts"] = [pid for pid in data.get("FavouritedProducts", []) if pid not in generated_ids]
                 
                 with open(products_json, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=4)
@@ -1668,7 +1734,7 @@ class MiscTab(QWidget):
             self.main_window.populate_save_table()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate new save folder: {str(e)}")
-
+ 
 class NPCsTab(QWidget):
     def __init__(self, parent=None, main_window=None):
         super().__init__(parent)
@@ -1832,19 +1898,6 @@ class SaveEditorWindow(QMainWindow):
         self.manager = SaveManager()  # Assume SaveManager is defined elsewhere
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
-
-        def resource_path(relative_path):
-            """ Get absolute path to resource, works for dev and for PyInstaller """
-            try:
-                # PyInstaller creates a temp folder and stores path in _MEIPASS
-                base_path = sys._MEIPASS
-            except Exception:
-                base_path = os.path.abspath(".")
-
-            return os.path.join(base_path, relative_path)
-
-        # Then set the icon using:
-        self.setWindowIcon(QIcon(resource_path("icon.ico")))
 
         # Create pages
         self.save_selection_page = self.create_save_selection_page()
@@ -2043,12 +2096,14 @@ class SaveEditorWindow(QMainWindow):
         self.lifetime_earnings_label = QLabel()
         self.weekly_deposit_sum_label = QLabel()
         self.rank_label = QLabel()
+        self.cash_balance_label = QLabel()
         self.play_time_label = QLabel()
 
         # Add labels to layout
         layout.addRow("Game Version:", self.game_version_label)
         layout.addRow("Creation Date:", self.creation_date_label)
         layout.addRow("Organization Name:", self.org_name_label)
+        layout.addRow("Cash Balance:", self.cash_balance_label)
         layout.addRow("Online Money:", self.online_money_label)
         layout.addRow("Networth:", self.networth_label)
         layout.addRow("Lifetime Earnings:", self.lifetime_earnings_label)
@@ -2074,6 +2129,7 @@ class SaveEditorWindow(QMainWindow):
         self.game_version_label.setText(info.get('game_version', 'Unknown'))
         self.creation_date_label.setText(info.get('creation_date', 'Unknown'))
         self.org_name_label.setText(info.get('organisation_name', 'Unknown'))
+        self.cash_balance_label.setText(f"${info.get('cash_balance', 0):,}")
         self.online_money_label.setText(f"${info.get('online_money', 0):,}")
         self.networth_label.setText(f"${info.get('networth', 0):,}")
         self.lifetime_earnings_label.setText(f"${info.get('lifetime_earnings', 0):,}")
@@ -2143,7 +2199,8 @@ class SaveEditorWindow(QMainWindow):
             stats_files = [
                 self.manager.current_save / "Money.json",
                 self.manager.current_save / "Rank.json",
-                self.manager.current_save / "Game.json"
+                self.manager.current_save / "Game.json",
+                self.manager.current_save / "Players/Player_0/Inventory.json"
             ]
             self.manager.create_feature_backup("Stats", stats_files)
             self.backups_tab.refresh_backup_list()  # Add this line
@@ -2152,6 +2209,7 @@ class SaveEditorWindow(QMainWindow):
             self.manager.set_networth(money_data["networth"])
             self.manager.set_lifetime_earnings(money_data["lifetime_earnings"])
             self.manager.set_weekly_deposit_sum(money_data["weekly_deposit_sum"])
+            self.manager.set_cash_balance(money_data["cash_balance"])
             self.manager.set_rank(rank_data["current_rank"])
             self.manager.set_rank_number(rank_data["rank_number"])
             self.manager.set_tier(rank_data["tier"])
