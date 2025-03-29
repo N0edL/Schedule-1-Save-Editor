@@ -16,5 +16,5 @@ pass
 *.spec
 
 # txt files
-*.txt
+version_info.txt
 *.log

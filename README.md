@@ -114,7 +114,6 @@ Some security solutions may flag the `.exe` version due to:
 
 ### Requirements
 - Python 3.9+
-- PySide6 library
 
 ### Installation
 ```bash
@@ -122,8 +121,8 @@ Some security solutions may flag the `.exe` version due to:
 git clone https://github.com/N0edL/Schedule-1-Save-Editor.git
 cd Schedule-1-Save-Editor
 
-# Install dependencies
-pip install PySide6
+# Install dependencies from requirments.txt
+pip install -r requirements.txt
 
 # Launch editor
 python main.py
