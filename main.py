@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QMessageBox, QTabWidget, QCheckBox, QGroupBox, QTextEdit, QHeaderView, QDialog
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QRegularExpressionValidator, QIntValidator
+from PySide6.QtGui import QRegularExpressionValidator, QIntValidator, QIcon
 
 def find_steam_path():
     try:
@@ -1857,6 +1857,19 @@ class BackupsTab(QWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(15)
+
+        def resource_path(relative_path):
+            """ Get absolute path to resource, works for dev and for PyInstaller """
+            try:
+                # PyInstaller creates a temp folder and stores path in _MEIPASS
+                base_path = sys._MEIPASS
+            except Exception:
+                base_path = os.path.abspath(".")
+
+            return os.path.join(base_path, relative_path)
+
+        # Then set the icon using:
+        self.setWindowIcon(QIcon(resource_path("icon.ico")))
 
         # Revert Changes Section
         revert_group = QGroupBox("Revert Changes")
