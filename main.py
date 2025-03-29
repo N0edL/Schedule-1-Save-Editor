@@ -1858,19 +1858,6 @@ class BackupsTab(QWidget):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(15)
 
-        def resource_path(relative_path):
-            """ Get absolute path to resource, works for dev and for PyInstaller """
-            try:
-                base_path = sys._MEIPASS
-            except Exception:
-                base_path = os.path.abspath(".")
-
-            return os.path.join(base_path, relative_path)
-
-        # Then set the icon using:
-        self.setWindowIcon(QIcon(resource_path("icon.ico")))
-
-        # Revert Changes Section
         revert_group = QGroupBox("Revert Changes")
         revert_layout = QVBoxLayout()
         revert_layout.setContentsMargins(10, 10, 10, 10)
@@ -1965,6 +1952,19 @@ class SaveEditorWindow(QMainWindow):
         self.manager = SaveManager()  # Assume SaveManager is defined elsewhere
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
+
+        def resource_path(relative_path):
+            """ Get absolute path to resource, works for dev and for PyInstaller """
+            try:
+                # PyInstaller creates a temp folder and stores path in _MEIPASS
+                base_path = sys._MEIPASS
+            except Exception:
+                base_path = os.path.abspath(".")
+
+            return os.path.join(base_path, relative_path)
+
+        # Then set the icon using:
+        self.setWindowIcon(QIcon(resource_path("icon.ico")))
 
         # Create pages
         self.save_selection_page = self.create_save_selection_page()
