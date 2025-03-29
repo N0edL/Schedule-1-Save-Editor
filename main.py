@@ -150,17 +150,63 @@ class SaveManager:
     def get_save_info(self) -> dict:
         if not self.save_data:
             return {}
-        creation_date = self.save_data.get("metadata", {}).get("CreationDate", {})
-        formatted_date = (f"{creation_date.get('Year', 'Unknown')}-{creation_date.get('Month', 'Unknown'):02d}-"
-                        f"{creation_date.get('Day', 'Unknown'):02d} {creation_date.get('Hour', 'Unknown'):02d}:"
-                        f"{creation_date.get('Minute', 'Unknown'):02d}:{creation_date.get('Second', 'Unknown'):02d}")
+        creation_date_data = self.save_data.get("metadata", {}).get("CreationDate", {})
+        
+        # Initialize formatted strings
+        creation_date_str = "Unknown"
+        creation_time_str = "Unknown"
+        time_data = self.save_data.get("time", {})
+        playtime_seconds = time_data.get("Playtime", 0)
+        
+        days = playtime_seconds // 86400  # 24*3600
+        remaining_seconds = playtime_seconds % 86400
+        hours = remaining_seconds // 3600
+        remaining_seconds %= 3600
+        minutes = remaining_seconds // 60
+        seconds = remaining_seconds % 60
+        playtime_str = f"{days}d, {hours}h, {minutes}m, {seconds}s"
+
+        # Check if all required keys are present
+        required_keys = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'Second']
+        if all(key in creation_date_data for key in required_keys):
+            try:
+                # Extract date/time components
+                year = int(creation_date_data['Year'])
+                month = int(creation_date_data['Month'])
+                day = int(creation_date_data['Day'])
+                hour = int(creation_date_data['Hour'])
+                minute = int(creation_date_data['Minute'])
+                second = int(creation_date_data['Second'])
+                
+                # Create datetime object
+                dt = datetime(year, month, day, hour, minute, second)
+                
+                # Format date with ordinal suffix
+                def get_ordinal(n):
+                    if 11 <= (n % 100) <= 13:
+                        return 'th'
+                    return {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+                suffix = get_ordinal(day)
+                creation_date_str = f"{day}{suffix} {dt.strftime('%B %Y')}"
+                
+                # Format time in 12-hour format with AM/PM and remove leading zero
+                creation_time_str = dt.strftime("%I:%M:%S %p").lstrip('0')
+                # Ensure 12 AM/PM shows correctly (replace leading space if needed)
+                if creation_time_str.startswith(' '):
+                    creation_time_str = creation_time_str[1:]
+                
+            except (ValueError, KeyError):
+                # Handle invalid date/time values
+                pass
+
         money_data = self.save_data.get("money", {})
         rank_data = self.save_data.get("rank", {})
         
-        # Extract cash_balance from the Items list
+        # Extract cash balance from inventory
         cash_balance = 0
-        if "inventory" in self.save_data and "Items" in self.save_data["inventory"]:
-            for item_str in self.save_data["inventory"]["Items"]:
+        inventory = self.save_data.get("inventory", {})
+        if "Items" in inventory:
+            for item_str in inventory["Items"]:
                 try:
                     item = json.loads(item_str)
                     if item.get("DataType") == "CashData":
@@ -168,10 +214,12 @@ class SaveManager:
                         break
                 except json.JSONDecodeError:
                     continue
-        
+
         return {
             "game_version": self.save_data.get("game", {}).get("GameVersion", "Unknown"),
-            "creation_date": formatted_date if creation_date else "Unknown",
+            "creation_date": creation_date_str,
+            "creation_time": creation_time_str,
+            "playtime": playtime_str,
             "organisation_name": self.save_data.get("game", {}).get("OrganisationName", "Unknown"),
             "online_money": int(money_data.get("OnlineBalance", 0)),
             "networth": int(money_data.get("Networth", 0)),
@@ -180,7 +228,7 @@ class SaveManager:
             "current_rank": rank_data.get("CurrentRank", "Unknown"),
             "rank_number": int(rank_data.get("Rank", 0)),
             "tier": int(rank_data.get("Tier", 0)),
-            "cash_balance": cash_balance  # Updated value
+            "cash_balance": cash_balance
         }
 
     def _save_json_file(self, filename: str, data: dict):
@@ -294,7 +342,7 @@ class SaveManager:
                         "tropicthunder", "giraffying", "longfaced", "sedating", "smelly", "paranoia", "laxative",
                         "caloriedense", "energizing", "calming", "brighteyed", "foggy", "glowing", "antigravity",
                         "slippery", "munchies", "explosive", "refreshing", "shrinking", "euphoric", "disorienting",
-                        "toxic", "zombifying", "cyclopean", "seizureinducing"]
+                        "toxic", "zombifying", "cyclopean", "seizureinducing", "focused", "electrifying"]
         ingredients = ["flumedicine", "gasoline", "mouthwash", "horsesemen", "iodine", "chili", "paracetamol",
                     "energydrink", "donut", "banana", "viagra", "cuke", "motoroil", "addy", "megabean", "battery"]
         product_set = set(discovered)
@@ -313,7 +361,8 @@ class SaveManager:
             mixer = random.choice(discovered)
             ingredient = random.choice(ingredients)
             mix_recipes.append({"Product": ingredient, "Mixer": mixer, "Output": product_id})
-            prices.append({"String": product_id, "Int": price})
+            if price is not None and price > 0:
+                prices.append({"String": product_id, "Int": price})
             properties = random.sample(property_pool, 8)
             product_data = {
                 "DataType": "WeedProductData",
@@ -1301,17 +1350,23 @@ class ProductsTab(QWidget):
         try:
             count = int(self.count_input.text())
             id_length = int(self.id_length_input.text())
-            price = int(self.price_input.text())
+            
+            # Handle price input
+            price_text = self.price_input.text().strip()
+            price = int(price_text) if price_text else None  # Allow empty price
+            
             add_to_listed = self.add_to_listed_checkbox.isChecked()
             add_to_favourited = self.add_to_favourited_checkbox.isChecked()
 
             # Backup products
             products_path = self.main_window.manager.current_save / "Products"
             self.main_window.manager.create_feature_backup("Products", [products_path])
-            self.main_window.backups_tab.refresh_backup_list()  # Add this line
+            self.main_window.backups_tab.refresh_backup_list()
 
-            self.main_window.manager.generate_products(count, id_length, price,add_to_listed, add_to_favourited)
+            self.main_window.manager.generate_products(count, id_length, price, add_to_listed, add_to_favourited)
             QMessageBox.information(self, "Success", f"Generated {count} products successfully!")
+        except ValueError as ve:
+            QMessageBox.warning(self, "Invalid Input", f"Please enter valid numbers: {str(ve)}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate products: {str(e)}")
 
@@ -2090,6 +2145,8 @@ class SaveEditorWindow(QMainWindow):
         # Labels for save info
         self.game_version_label = QLabel()
         self.creation_date_label = QLabel()
+        self.creation_time_label = QLabel()  # New time label
+        self.playtime_label = QLabel()
         self.org_name_label = QLabel()
         self.online_money_label = QLabel()
         self.networth_label = QLabel()
@@ -2097,11 +2154,12 @@ class SaveEditorWindow(QMainWindow):
         self.weekly_deposit_sum_label = QLabel()
         self.rank_label = QLabel()
         self.cash_balance_label = QLabel()
-        self.play_time_label = QLabel()
 
         # Add labels to layout
         layout.addRow("Game Version:", self.game_version_label)
         layout.addRow("Creation Date:", self.creation_date_label)
+        layout.addRow("Creation Time:", self.creation_time_label)  # Add new row
+        layout.addRow("Playtime:", self.playtime_label)
         layout.addRow("Organization Name:", self.org_name_label)
         layout.addRow("Cash Balance:", self.cash_balance_label)
         layout.addRow("Online Money:", self.online_money_label)
@@ -2113,7 +2171,7 @@ class SaveEditorWindow(QMainWindow):
         # Button layout
         button_layout = QHBoxLayout()
         back_button = QPushButton("Back to Selection")
-        back_button.clicked.connect(self.back_to_selection)  # Connect to new method
+        back_button.clicked.connect(self.back_to_selection)
         edit_button = QPushButton("Edit Save")
         edit_button.clicked.connect(self.show_edit_page)
         button_layout.addWidget(back_button)
@@ -2128,6 +2186,7 @@ class SaveEditorWindow(QMainWindow):
         info = self.manager.get_save_info()
         self.game_version_label.setText(info.get('game_version', 'Unknown'))
         self.creation_date_label.setText(info.get('creation_date', 'Unknown'))
+        self.creation_time_label.setText(info.get('creation_time', 'Unknown'))  # Set time
         self.org_name_label.setText(info.get('organisation_name', 'Unknown'))
         self.cash_balance_label.setText(f"${info.get('cash_balance', 0):,}")
         self.online_money_label.setText(f"${info.get('online_money', 0):,}")
@@ -2135,6 +2194,7 @@ class SaveEditorWindow(QMainWindow):
         self.lifetime_earnings_label.setText(f"${info.get('lifetime_earnings', 0):,}")
         self.weekly_deposit_sum_label.setText(f"${info.get('weekly_deposit_sum', 0):,}")
         self.rank_label.setText(f"{info.get('current_rank', 'Unknown')} (Rank: {info.get('rank_number', 0)}, Tier: {info.get('tier', 0)})")
+        self.playtime_label.setText(info.get('playtime', '0d, 0h, 0m, 0s'))
 
     def create_edit_save_page(self):
         page = QWidget()
