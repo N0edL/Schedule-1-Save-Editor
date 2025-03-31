@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QMessageBox, QTabWidget, QCheckBox, QGroupBox, QTextEdit, QHeaderView, QDialog
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QRegularExpressionValidator, QIntValidator, QIcon
+from PySide6.QtGui import QRegularExpressionValidator, QIntValidator
 
 def find_steam_path():
     try:
@@ -63,6 +63,34 @@ def parse_npc_log(log_text: str) -> list[tuple[str, str]]:
     matches = re.findall(pattern, log_text)
     return [(name.strip(), id.strip()) for name, id in matches]
 
+GOOFYAHHHNAMES = [
+    "NoedLxCry4pt", "Nigger", "Fuck You", "Cry4pt", "NoedL", "I Love Kids", "I Love Children",
+    "Bitch", "Fuck", "Retard", "Anal Destroyer", "Nigga", "Cum Shot", "Ass Blaster", "Cummy Wummy", 
+    "Deez Nutz", "Supreme", "Big Chungus", "Shit", "Hell", "Ass", "Bastard", "Cunt", "Dick", 
+    "Pussy", "Faggot", "Mother Fucker", "Son Of A Bitch", "Nazi", "Sex Offender", "KYS",
+    # Added drug and medicine names
+    "Abacavir", "Acetaminophen", "Acetazolamide", "Aciclovir", "Adalimumab", "Adenosine", "Adrenaline", 
+    "Albendazole", "Albuterol", "Allopurinol", "Amlodipine", "Amoxicillin", "Amphotericin B", "Aspirin", 
+    "Atorvastatin", "Atropine", "Azithromycin", "Baclofen", "Beclomethasone", "Benzocaine", "Betamethasone", 
+    "Bupropion", "Buspirone", "Caffeine", "Calcitriol", "Captopril", "Carbamazepine", "Cefalexin", 
+    "Ceftriaxone", "Celecoxib", "Cetirizine", "Chlorphenamine", "Ciprofloxacin", "Citalopram", "Clarithromycin", 
+    "Clonazepam", "Clopidogrel", "Codeine", "Cyclophosphamide", "Dexamethasone", "Diazepam", "Diclofenac", 
+    "Digoxin", "Diltiazem", "Diphenhydramine", "Doxycycline", "Enalapril", "Erythromycin", "Escitalopram", 
+    "Esomeprazole", "Ezetimibe", "Famotidine", "Fentanyl", "Ferrous Sulfate", "Fluconazole", "Fluoxetine", 
+    "Fluticasone", "Folic Acid", "Furosemide", "Gabapentin", "Gliclazide", "Heparin", "Hydrochlorothiazide", 
+    "Hydrocortisone", "Ibuprofen", "Imatinib", "Insulin", "Ipratropium", "Irbesartan", "Isoniazid", 
+    "Ketamine", "Ketoconazole", "Labetalol", "Lamotrigine", "Lansoprazole", "Levetiracetam", "Levofloxacin", 
+    "Levothyroxine", "Lidocaine", "Lisinopril", "Loratadine", "Lorazepam", "Losartan", "Metformin", 
+    "Methotrexate", "Methylprednisolone", "Metoprolol", "Metronidazole", "Mirtazapine", "Montelukast", 
+    "Morphine", "Naproxen", "Nifedipine", "Nitroglycerin", "Omeprazole", "Ondansetron", "Oxycodone", 
+    "Pantoprazole", "Paracetamol", "Paroxetine", "Penicillin", "Phenytoin", "Prazosin", "Prednisolone", 
+    "Pregabalin", "Propranolol", "Quetiapine", "Rabeprazole", "Ramipril", "Ranitidine", "Risperidone", 
+    "Rosuvastatin", "Salbutamol", "Sertraline", "Sildenafil", "Simvastatin", "Sodium Valproate", "Spironolactone", 
+    "Sumatriptan", "Tacrolimus", "Tadalafil", "Tamoxifen", "Tamsulosin", "Terbinafine", "Testosterone", 
+    "Tetracycline", "Thiamine", "Tiotropium", "Topiramate", "Tramadol", "Trazodone", "Valproic Acid", 
+    "Vancomycin", "Venlafaxine", "Verapamil", "Warfarin", "Zidovudine", "Zolpidem"
+]
+
 class SaveManager:
     def __init__(self):
         self.savefile_dir = self._find_save_directory()
@@ -70,6 +98,9 @@ class SaveManager:
         self.save_data: Dict[str, Union[dict, list]] = {}
         self.backup_path: Optional[Path] = None
         self.feature_backups: Optional[Path] = None
+
+        self.used_names = set()
+        self.available_names = []
 
     @staticmethod
     def _is_steamid_folder(name: str) -> bool:
@@ -116,12 +147,26 @@ class SaveManager:
             self.save_data["properties"] = self._load_folder_data("Properties")
             self.save_data["vehicles"] = self._load_folder_data("OwnedVehicles")
             self.save_data["businesses"] = self._load_folder_data("Businesses")
-            # Add loading of Player_0's Inventory.json
             self.save_data["inventory"] = self._load_json_file("Players/Player_0/Inventory.json")
-            # Set backup paths
             self.backup_path = self.current_save.parent / (self.current_save.name + '_Backup')
             self.feature_backups = self.backup_path / 'feature_backups'
             self.create_initial_backup()
+
+            # Add this block to initialize used_names and available_names
+            self.used_names = set()
+            products_path = self.current_save / "Products" / "CreatedProducts"
+            if products_path.exists():
+                for file in products_path.glob("*.json"):
+                    try:
+                        with open(file, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            name = data.get("Name")
+                            if name:
+                                self.used_names.add(name)
+                    except json.JSONDecodeError:
+                        continue
+            self.available_names = [name for name in GOOFYAHHHNAMES if name not in self.used_names]
+
             return True
         except Exception as e:
             print(f"Error loading save: {e}")
@@ -305,17 +350,19 @@ class SaveManager:
         with open(products_json, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
 
-    def generate_products(self, count: int, id_length: int, price: int, add_to_listed: bool = False, add_to_favourited: bool = False):
+    def generate_products(self, count: int, id_length: int, price: int, 
+                        add_to_listed: bool = False, add_to_favourited: bool = False,
+                        min_properties: int = 1, max_properties: int = 34, 
+                        drug_type: int = 0, use_id_as_name: bool = False):
         products_path = self.current_save / "Products"
         os.makedirs(products_path, exist_ok=True)
         created_path = products_path / "CreatedProducts"
         os.makedirs(created_path, exist_ok=True)
 
-        # Define the relative path to Products.json
         products_rel_path = "Products/Products.json"
         products_json = self.current_save / products_rel_path
 
-        # Load existing data using the relative path
+        # Load or initialize products data
         if products_json.exists():
             data = self._load_json_file(products_rel_path)
         else:
@@ -332,6 +379,7 @@ class SaveManager:
                 "FavouritedProducts": []
             }
 
+        new_product_ids = []
         discovered = data.setdefault("DiscoveredProducts", [])
         mix_recipes = data.setdefault("MixRecipes", [])
         prices = data.setdefault("ProductPrices", [])
@@ -342,35 +390,64 @@ class SaveManager:
                         "tropicthunder", "giraffying", "longfaced", "sedating", "smelly", "paranoia", "laxative",
                         "caloriedense", "energizing", "calming", "brighteyed", "foggy", "glowing", "antigravity",
                         "slippery", "munchies", "explosive", "refreshing", "shrinking", "euphoric", "disorienting",
-                        "toxic", "zombifying", "cyclopean", "seizureinducing", "focused", "electrifying"]
+                        "toxic", "zombifying", "cyclopean", "seizureinducing", "focused", "electrifying", "sneaky"]
         ingredients = ["flumedicine", "gasoline", "mouthwash", "horsesemen", "iodine", "chili", "paracetamol",
                     "energydrink", "donut", "banana", "viagra", "cuke", "motoroil", "addy", "megabean", "battery"]
-        product_set = set(discovered)
-        new_products = []
+        
+        existing_ids = set(discovered)
 
         def generate_id(length):
             return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
 
         for _ in range(count):
-            product_id = generate_id(id_length)
-            while product_id in product_set:
+            if use_id_as_name:
+                # Generate unique product_id when using IDs as names
                 product_id = generate_id(id_length)
-            product_set.add(product_id)
-            discovered.append(product_id)
-            new_products.append(product_id)
-            mixer = random.choice(discovered)
+                while product_id in existing_ids:
+                    product_id = generate_id(id_length)
+                existing_ids.add(product_id)
+                product_name = product_id
+                product_key = product_id
+            else:
+                # Select unique product_name when using random names
+                if self.available_names:
+                    product_name = self.available_names.pop(0)
+                else:
+                    base_name = GOOFYAHHHNAMES[0]
+                    i = 1
+                    while True:
+                        candidate = f"{base_name} {i}"
+                        if candidate not in self.used_names:
+                            product_name = candidate
+                            break
+                        i += 1
+                self.used_names.add(product_name)
+                product_key = product_name
+
+            # Add to discovered products
+            discovered.append(product_key)
+
+            # Create mix recipe
             ingredient = random.choice(ingredients)
-            mix_recipes.append({"Product": ingredient, "Mixer": mixer, "Output": product_id})
+            mix_recipes.append({
+                "Product": ingredient,
+                "Mixer": product_key,
+                "Output": product_key
+            })
+
+            # Set price if specified
             if price is not None and price > 0:
-                prices.append({"String": product_id, "Int": price})
-            properties = random.sample(property_pool, 8)
+                prices.append({"String": product_key, "Int": price})
+
+            # Create product data
+            properties = random.sample(property_pool, random.randint(min_properties, max_properties))
             product_data = {
                 "DataType": "WeedProductData",
                 "DataVersion": 0,
                 "GameVersion": "0.3.3f11",
-                "Name": product_id,
-                "ID": product_id,
-                "DrugType": 0,
+                "Name": product_name,
+                "ID": product_key,  # Set "ID" to product_key
+                "DrugType": drug_type,
                 "Properties": properties,
                 "AppearanceSettings": {
                     "MainColor": {"r": random.randint(0, 255), "g": random.randint(0, 255), "b": random.randint(0, 255), "a": 255},
@@ -379,19 +456,21 @@ class SaveManager:
                     "StemColor": {"r": random.randint(0, 255), "g": random.randint(0, 255), "b": random.randint(0, 255), "a": 255}
                 }
             }
-            # Save individual product file using the correct relative path
-            product_rel_path = f"Products/CreatedProducts/{product_id}.json"
+
+            # Save individual product file
+            product_rel_path = f"Products/CreatedProducts/{product_key}.json"
             self._save_json_file(product_rel_path, product_data)
 
+            # Collect new product keys
+            new_product_ids.append(product_key)
+
         if add_to_listed:
-            listed_products.extend(new_products)
-
+            listed_products.extend(new_product_ids)
         if add_to_favourited:
-                    favourited_products.extend(new_products)
+            favourited_products.extend(new_product_ids)
 
-        # Save the updated data using the relative path
         self._save_json_file(products_rel_path, data)
-
+    
     def update_property_quantities(self, property_type: str, quantity: int, 
                                 packaging: str, update_type: str, quality: str) -> int:
         """Update quantities and quality in property Data.json files"""
@@ -435,14 +514,14 @@ class SaveManager:
                         modify = False
                         if update_type == "both":
                             modify = True
-                        elif update_type == "weed" and item.get("DataType") == "WeedData":
+                        elif update_type == "weed" and item.get("DataType") in ("WeedData", "CocaineData", "MethData"):
                             modify = True
                         elif update_type == "item" and item.get("DataType") == "ItemData":
                             modify = True
 
                         if modify:
                             item["Quantity"] = quantity
-                            if item.get("DataType") == "WeedData":
+                            if item.get("DataType") in ("WeedData", "CocaineData", "MethData"):
                                 if packaging != "none":
                                     item["PackagingID"] = packaging
                                 item["Quality"] = quality  # Set quality here
@@ -938,6 +1017,25 @@ class SaveManager:
         else:
             print("No 'inventory' in save_data.")
 
+    def get_dealers(self) -> list[str]:
+        """Retrieve a list of dealer names from the NPCs directory."""
+        npcs_dir = self.current_save / "NPCs"
+        if not npcs_dir.exists():
+            return []
+        dealers = []
+        for npc_folder in npcs_dir.iterdir():
+            if npc_folder.is_dir():
+                npc_json_path = npc_folder / "NPC.json"
+                if npc_json_path.exists():
+                    try:
+                        with open(npc_json_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                        if data.get("DataType") == "DealerData":
+                            dealers.append(npc_folder.name)
+                    except json.JSONDecodeError:
+                        continue
+        return dealers
+
 class FeatureRevertDialog(QDialog):
     def __init__(self, parent=None, manager=None):
         super().__init__(parent)
@@ -1257,6 +1355,26 @@ class ProductsTab(QWidget):
         form_layout.addRow("ID Length:", self.id_length_input)
         form_layout.addRow("Price ($):", self.price_input)
 
+        self.drug_type_input = QLineEdit()
+        self.drug_type_input.setValidator(QIntValidator(0, 2))  # Adjust range as needed
+        self.drug_type_input.setText("0")  # Default to 2
+        form_layout.addRow("Drug Type:", self.drug_type_input)
+
+        # Add after existing form elements
+        self.min_properties_input = QLineEdit()
+        self.min_properties_input.setValidator(QIntValidator(1, 34))
+        self.min_properties_input.setText("1")
+        form_layout.addRow("Min Mixes Per Product:", self.min_properties_input)
+
+        self.max_properties_input = QLineEdit()
+        self.max_properties_input.setValidator(QIntValidator(1, 34))
+        self.max_properties_input.setText("34")
+        form_layout.addRow("Max Mixes Per Product:", self.max_properties_input)
+
+        # Add checkbox for name generation type
+        self.name_generation_checkbox = QCheckBox("Use Random Names Instead Of IDs")
+        form_layout.addRow("", self.name_generation_checkbox)
+
         self.add_to_listed_checkbox = QCheckBox("Add to Listed Products")
         form_layout.addRow("", self.add_to_listed_checkbox)
 
@@ -1349,21 +1467,49 @@ class ProductsTab(QWidget):
             return
         try:
             count = int(self.count_input.text())
-            id_length = int(self.id_length_input.text())
+            
+            # Handle ID length based on checkbox state
+            if self.name_generation_checkbox.isChecked():
+                # Using random names: ID length is optional, default to 10 if empty
+                id_length_text = self.id_length_input.text().strip()
+                id_length = int(id_length_text) if id_length_text else 10
+            else:
+                # Not using random names: ID length is required
+                id_length_text = self.id_length_input.text().strip()
+                if not id_length_text:
+                    raise ValueError("ID Length is required when not using random names")
+                id_length = int(id_length_text)
             
             # Handle price input
             price_text = self.price_input.text().strip()
             price = int(price_text) if price_text else None  # Allow empty price
             
+            drug_type = int(self.drug_type_input.text()) if self.drug_type_input.text().strip() else 0
+            
             add_to_listed = self.add_to_listed_checkbox.isChecked()
             add_to_favourited = self.add_to_favourited_checkbox.isChecked()
+            use_id_as_name = not self.name_generation_checkbox.isChecked()
 
-            # Backup products
+            min_props = int(self.min_properties_input.text())
+            max_props = int(self.max_properties_input.text())
+            
+            if min_props > max_props:
+                raise ValueError("Minimum properties cannot exceed maximum")
+            if max_props > 34:
+                raise ValueError("Maximum cannot exceed 34 (total available properties)")
+
+            # Backup products FIRST
             products_path = self.main_window.manager.current_save / "Products"
             self.main_window.manager.create_feature_backup("Products", [products_path])
             self.main_window.backups_tab.refresh_backup_list()
 
-            self.main_window.manager.generate_products(count, id_length, price, add_to_listed, add_to_favourited)
+            # SINGLE call to generate_products
+            self.main_window.manager.generate_products(
+                count, id_length, price, 
+                add_to_listed, add_to_favourited,
+                min_props, max_props, drug_type, use_id_as_name
+            )
+
             QMessageBox.information(self, "Success", f"Generated {count} products successfully!")
         except ValueError as ve:
             QMessageBox.warning(self, "Invalid Input", f"Please enter valid numbers: {str(ve)}")
@@ -1551,16 +1697,33 @@ class MiscTab(QWidget):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(15)
 
-        # Organisation Name Section
+        # Organisation Settings Group
         org_group = QGroupBox("Organization Settings")
         org_layout = QFormLayout()
         org_layout.setContentsMargins(10, 10, 10, 10)
         self.organisation_name_input = QLineEdit()
         org_layout.addRow(QLabel("Organization Name:"), self.organisation_name_input)
+        
+        # Add Console Enabled Checkbox
+        self.console_enabled_cb = QCheckBox("Console Enabled")
+        org_layout.addRow(self.console_enabled_cb)
         org_group.setLayout(org_layout)
         layout.addWidget(org_group)
 
-        # Quests Section
+        # Save Management Group
+        save_mgmt_group = QGroupBox("Save Management")
+        save_mgmt_layout = QFormLayout()
+        save_mgmt_layout.setContentsMargins(10, 10, 10, 10)
+        self.save_folder_combo = QComboBox()
+        self.load_save_folders()  # Populate the combo box
+        save_mgmt_layout.addRow("Select Save Folder:", self.save_folder_combo)
+        self.delete_save_btn = QPushButton("Delete Selected Save Folder")
+        self.delete_save_btn.clicked.connect(self.delete_selected_save)
+        save_mgmt_layout.addRow(self.delete_save_btn)
+        save_mgmt_group.setLayout(save_mgmt_layout)
+        layout.addWidget(save_mgmt_group)
+
+        # Quests Section (existing)
         quests_group = QGroupBox("Quest Management")
         quests_layout = QVBoxLayout()
         quests_layout.setContentsMargins(10, 10, 10, 10)
@@ -1572,7 +1735,7 @@ class MiscTab(QWidget):
         quests_group.setLayout(quests_layout)
         layout.addWidget(quests_group)
 
-        # Variables Section
+        # Variables Section (existing)
         vars_group = QGroupBox("Variable Management")
         vars_layout = QVBoxLayout()
         vars_layout.setContentsMargins(10, 10, 10, 10)
@@ -1585,7 +1748,7 @@ class MiscTab(QWidget):
         vars_group.setLayout(vars_layout)
         layout.addWidget(vars_group)
 
-        # Mod Installation Section
+        # Mod Installation Section (existing)
         mod_group = QGroupBox("Achievement Unlocker")
         mod_layout = QVBoxLayout()
         mod_layout.setContentsMargins(10, 10, 10, 10)
@@ -1597,7 +1760,7 @@ class MiscTab(QWidget):
         mod_group.setLayout(mod_layout)
         layout.addWidget(mod_group)
 
-        # New Save Generation Section
+        # New Save Generation Section (existing)
         new_save_group = QGroupBox("New Save Generation")
         new_save_layout = QFormLayout()
         new_save_layout.setContentsMargins(10, 10, 10, 10)
@@ -1615,13 +1778,18 @@ class MiscTab(QWidget):
         self.vars_warning_label.setText("WARNING: Modifies variables in:\n- Variables/\n- Players/Player_*/Variables/")
 
     def set_data(self, info):
-        """Populate the input field with data from the info dictionary."""
-        self.organisation_name_input.setText(info.get("organisation_name", ""))
+            """Populate the input fields with data from the info dictionary."""
+            self.organisation_name_input.setText(info.get("organisation_name", ""))
+            # Set Console Enabled state from Game.json
+            game_data = self.main_window.manager._load_json_file("Game.json")
+            console_enabled = game_data.get("ConsoleEnabled", False)
+            self.console_enabled_cb.setChecked(console_enabled)
 
     def get_data(self):
-        """Retrieve data from the input field."""
+        """Retrieve data from the input fields."""
         return {
-            "organisation_name": self.organisation_name_input.text()
+            "organisation_name": self.organisation_name_input.text(),
+            "console_enabled": self.console_enabled_cb.isChecked()
         }
 
     def complete_all_quests(self):
@@ -1790,6 +1958,65 @@ class MiscTab(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate new save folder: {str(e)}")
  
+    def load_save_folders(self):
+            """Populate the save folder combo box with available saves."""
+            saves = self.main_window.manager.get_save_folders()
+            self.save_folder_combo.clear()
+            for save in saves:
+                self.save_folder_combo.addItem(save['name'], save['path'])
+ 
+    def delete_selected_save(self):
+        # Get the selected save folder path from the combo box
+        save_path = self.save_folder_combo.currentData()
+        if not save_path:
+            QMessageBox.warning(self, "No Selection", "Please select a save folder to delete.")
+            return
+
+        # Construct the backup folder path (assumes backup is save folder name + '_Backup')
+        backup_path = Path(save_path).parent / (Path(save_path).name + '_Backup')
+
+        # Prepare a warning message, customized if it's the current save
+        if Path(save_path) == self.main_window.manager.current_save:
+            warning_msg = ("You are about to delete the currently loaded save folder and its backup.\n"
+                        "This action cannot be undone and will close the editor.\n"
+                        "Are you sure?")
+        else:
+            warning_msg = (f"Are you sure you want to delete the save folder "
+                        f"'{self.save_folder_combo.currentText()}' and its backup?\n"
+                        "This action cannot be undone.")
+
+        # Show confirmation dialog
+        reply = QMessageBox.warning(
+            self,
+            "Confirm Delete",
+            warning_msg,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        # Proceed with deletion if user confirms
+        if reply == QMessageBox.Yes:
+            try:
+                # Delete the main save folder
+                shutil.rmtree(save_path)
+
+                # Delete the backup folder if it exists
+                if backup_path.exists():
+                    shutil.rmtree(backup_path)
+
+                # Notify user of success
+                QMessageBox.information(self, "Success", "Save folder and its backup deleted successfully.")
+                
+                # Refresh UI elements
+                self.load_save_folders()  # Update the combo box
+                self.main_window.populate_save_table()  # Update the save selection table
+                
+                # If the deleted save was the current one, return to selection screen
+                if Path(save_path) == self.main_window.manager.current_save:
+                    self.main_window.back_to_selection()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to delete save folder or backup: {str(e)}")
+ 
 class NPCsTab(QWidget):
     def __init__(self, parent=None, main_window=None):
         super().__init__(parent)
@@ -1858,6 +2085,7 @@ class BackupsTab(QWidget):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(15)
 
+        # Revert Changes Section
         revert_group = QGroupBox("Revert Changes")
         revert_layout = QVBoxLayout()
         revert_layout.setContentsMargins(10, 10, 10, 10)
@@ -1944,27 +2172,545 @@ class BackupsTab(QWidget):
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to delete backups: {str(e)}")
 
+class DealersInventoryTab(QWidget):
+    def __init__(self, parent=None, main_window=None):
+        super().__init__(parent)
+        self.main_window = main_window
+        layout = QVBoxLayout()
+
+        # Dealer selection dropdown
+        self.dealer_combo = QComboBox()
+        self.dealer_combo.currentIndexChanged.connect(self.load_dealer_inventory)
+        layout.addWidget(QLabel("Select Dealer:"))
+        layout.addWidget(self.dealer_combo)
+
+        # Add cash input group
+        self.cash_group = QGroupBox("Dealer Cash")
+        cash_layout = QFormLayout()
+        self.cash_input = QLineEdit()
+        self.cash_input.setValidator(QRegularExpressionValidator(r"^\d{1,10}$"))
+        self.cash_input.setEnabled(False)  # Disabled initially until a dealer is selected
+        cash_layout.addRow("Cash:", self.cash_input)
+        self.cash_group.setLayout(cash_layout)
+        layout.addWidget(self.cash_group)
+
+        # Inventory table
+        self.inventory_table = QTableWidget()
+        self.inventory_table.setColumnCount(5)
+        self.inventory_table.setHorizontalHeaderLabels(["Item Type", "ID", "Quantity", "Quality", "PackagingID"])
+        self.inventory_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.inventory_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.inventory_table.setEditTriggers(QTableWidget.DoubleClicked | QTableWidget.EditKeyPressed)
+        self.inventory_table.itemChanged.connect(self.on_item_changed)
+        self.inventory_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        layout.addWidget(self.inventory_table, 1)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        insert_button = QPushButton("Insert Row")
+        insert_button.clicked.connect(self.insert_row)
+        delete_button = QPushButton("Delete Selected Row")
+        delete_button.clicked.connect(self.delete_selected_row)
+        save_button = QPushButton("Save Changes for this Dealer")
+        save_button.clicked.connect(self.save_changes)
+        button_layout.addWidget(insert_button)
+        button_layout.addWidget(delete_button)
+        button_layout.addWidget(save_button)
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+        self.load_dealers()
+
+    def load_dealers(self):
+        """Populate the dealer dropdown with available dealers."""
+        if not self.main_window.manager.current_save:
+            return
+        dealers = self.main_window.manager.get_dealers()
+        self.dealer_combo.clear()
+        self.dealer_combo.addItems(dealers)
+
+    def load_dealer_inventory(self):
+        """Load the selected dealer's inventory and cash into the UI."""
+        dealer_name = self.dealer_combo.currentText()
+        if not dealer_name:
+            self.cash_input.setText("")
+            self.cash_input.setEnabled(False)
+            self.inventory_table.setRowCount(0)
+            return
+
+        # Load inventory from Inventory.json
+        inventory_path = self.main_window.manager.current_save / "NPCs" / dealer_name / "Inventory.json"
+        if inventory_path.exists():
+            with open(inventory_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            items = data.get("Items", [])
+        else:
+            items = []
+        self.display_inventory(items)
+
+        # Load cash from NPC.json
+        npc_json_path = self.main_window.manager.current_save / "NPCs" / dealer_name / "NPC.json"
+        with open(npc_json_path, 'r', encoding='utf-8') as f:
+            npc_data = json.load(f)
+        cash = round(npc_data.get("Cash", 0))  # Round to nearest integer
+        self.cash_input.setText(str(cash))
+        self.cash_input.setEnabled(True)
+
+    def display_inventory(self, items):
+        """Display the inventory in the table with all text fields editable."""
+        self.inventory_table.blockSignals(True)
+        self.inventory_table.setRowCount(0)
+        for item_str in items:
+            try:
+                item = json.loads(item_str)
+                item_type = item.get("DataType", "Unknown")
+                item_id = item.get("ID", "Unknown")
+                quantity = str(item.get("Quantity", 0))
+                quality = item.get("Quality", "")
+                packaging = item.get("PackagingID", "")
+                row = self.inventory_table.rowCount()
+                self.inventory_table.insertRow(row)
+
+                type_item = QTableWidgetItem(item_type)
+                self.inventory_table.setItem(row, 0, type_item)
+
+                id_item = QTableWidgetItem(item_id)
+                self.inventory_table.setItem(row, 1, id_item)
+
+                quantity_item = QTableWidgetItem(quantity)
+                quantity_item.setData(Qt.UserRole, item_str)
+                self.inventory_table.setItem(row, 2, quantity_item)
+
+                if item_type in ("WeedData", "CocaineData", "MethData"):
+                    quality_combo = QComboBox()
+                    quality_combo.addItems(["Trash", "Poor", "Standard", "Premium", "Heavenly"])
+                    quality_combo.setCurrentText(quality if quality else "Standard")
+                    quality_combo.currentTextChanged.connect(
+                        lambda text, r=row: self.update_item_json(r, "Quality", text)
+                    )
+                    self.inventory_table.setCellWidget(row, 3, quality_combo)
+
+                    packaging_combo = QComboBox()
+                    packaging_combo.addItems(["none", "baggie", "jar"])
+                    packaging_combo.setCurrentText(packaging if packaging else "none")
+                    packaging_combo.currentTextChanged.connect(
+                        lambda text, r=row: self.update_item_json(r, "PackagingID", text)
+                    )
+                    self.inventory_table.setCellWidget(row, 4, packaging_combo)
+                else:
+                    quality_item = QTableWidgetItem("N/A")
+                    quality_item.setFlags(quality_item.flags() & ~Qt.ItemIsEditable)
+                    self.inventory_table.setItem(row, 3, quality_item)
+
+                    packaging_item = QTableWidgetItem("N/A")
+                    packaging_item.setFlags(packaging_item.flags() & ~Qt.ItemIsEditable)
+                    self.inventory_table.setItem(row, 4, packaging_item)
+            except json.JSONDecodeError:
+                continue
+        self.inventory_table.blockSignals(False)
+
+    def on_item_changed(self, item):
+        row = item.row()
+        column = item.column()
+        if column in (0, 1, 2):
+            field = ["DataType", "ID", "Quantity"][column]
+            value = item.text()
+            if column == 2:
+                try:
+                    value = int(value)  # Ensure quantity is an integer
+                except ValueError:
+                    QMessageBox.warning(self, "Invalid Quantity", "Quantity must be an integer.")
+                    item.setText("0")
+                    return
+            self.update_item_json(row, field, value)
+            if column == 0:
+                self.update_quality_packaging_cells(row, value)
+
+    def update_quality_packaging_cells(self, row, item_type):
+        for col in (3, 4):
+            self.inventory_table.removeCellWidget(row, col)
+            self.inventory_table.setItem(row, col, None)
+        if item_type in ("WeedData", "CocaineData", "MethData"):
+            quality_combo = QComboBox()
+            quality_combo.addItems(["Trash", "Poor", "Standard", "Premium", "Heavenly"])
+            quality_combo.setCurrentText("Standard")
+            quality_combo.currentTextChanged.connect(
+                lambda text, r=row: self.update_item_json(r, "Quality", text)
+            )
+            self.inventory_table.setCellWidget(row, 3, quality_combo)
+            packaging_combo = QComboBox()
+            packaging_combo.addItems(["none", "baggie", "jar"])
+            packaging_combo.setCurrentText("none")
+            packaging_combo.currentTextChanged.connect(
+                lambda text, r=row: self.update_item_json(r, "PackagingID", text)
+            )
+            self.inventory_table.setCellWidget(row, 4, packaging_combo)
+        else:
+            for col in (3, 4):
+                na_item = QTableWidgetItem("N/A")
+                na_item.setFlags(na_item.flags() & ~Qt.ItemIsEditable)
+                self.inventory_table.setItem(row, col, na_item)
+        quantity_item = self.inventory_table.item(row, 2)
+        if quantity_item:
+            item_str = quantity_item.data(Qt.UserRole)
+            if item_str:
+                try:
+                    item = json.loads(item_str)
+                    if item_type in ("WeedData", "CocaineData", "MethData"):
+                        if "Quality" not in item:
+                            item["Quality"] = "Standard"
+                        if "PackagingID" not in item:
+                            item["PackagingID"] = "none"
+                    else:
+                        item.pop("Quality", None)
+                        item.pop("PackagingID", None)
+                    quantity_item.setData(Qt.UserRole, json.dumps(item))
+                except json.JSONDecodeError:
+                    pass
+
+    def update_item_json(self, row, field, value):
+        quantity_item = self.inventory_table.item(row, 2)
+        if quantity_item:
+            item_str = quantity_item.data(Qt.UserRole)
+            if item_str:
+                try:
+                    item = json.loads(item_str)
+                    item[field] = value
+                    quantity_item.setData(Qt.UserRole, json.dumps(item))
+                except json.JSONDecodeError:
+                    QMessageBox.warning(self, "Error", "Invalid item data")
+
+    def insert_row(self):
+        self.inventory_table.blockSignals(True)
+        row = self.inventory_table.rowCount()
+        self.inventory_table.insertRow(row)
+        item = {"DataType": "ItemData", "ID": "new_item", "Quantity": 1}
+        item_str = json.dumps(item)
+        self.inventory_table.setItem(row, 0, QTableWidgetItem("ItemData"))
+        self.inventory_table.setItem(row, 1, QTableWidgetItem("new_item"))
+        quantity_item = QTableWidgetItem("1")
+        quantity_item.setData(Qt.UserRole, item_str)
+        self.inventory_table.setItem(row, 2, quantity_item)
+        for col in (3, 4):
+            na_item = QTableWidgetItem("N/A")
+            na_item.setFlags(na_item.flags() & ~Qt.ItemIsEditable)
+            self.inventory_table.setItem(row, col, na_item)
+        self.inventory_table.blockSignals(False)
+
+    def delete_selected_row(self):
+        selected = self.inventory_table.selectedItems()
+        if selected:
+            row = selected[0].row()
+            self.inventory_table.blockSignals(True)
+            self.inventory_table.removeRow(row)
+            self.inventory_table.blockSignals(False)
+        else:
+            QMessageBox.warning(self, "No Selection", "Please select a row to delete.")
+
+    def save_changes(self):
+        """Save the updated inventory and cash to the dealer's files."""
+        dealer_name = self.dealer_combo.currentText()
+        if not dealer_name:
+            return
+
+        # Paths for inventory and NPC files
+        inventory_path = self.main_window.manager.current_save / "NPCs" / dealer_name / "Inventory.json"
+        npc_json_path = self.main_window.manager.current_save / "NPCs" / dealer_name / "NPC.json"
+
+        # Create backup of the entire dealer folder (includes both Inventory.json and NPC.json)
+        self.main_window.manager.create_feature_backup("NPCs", [inventory_path.parent])
+
+        # Save inventory
+        items = [self.inventory_table.item(row, 2).data(Qt.UserRole) for row in range(self.inventory_table.rowCount())]
+        inventory_data = {
+            "DataType": "InventoryData",
+            "DataVersion": 0,
+            "GameVersion": "0.3.3f11",
+            "Items": items
+        }
+        with open(inventory_path, 'w', encoding='utf-8') as f:
+            json.dump(inventory_data, f, indent=4)
+
+        # Save cash
+        cash_value = self.cash_input.text()
+        if cash_value:
+            try:
+                cash = int(cash_value)  # Ensure cash is saved as an integer
+                with open(npc_json_path, 'r', encoding='utf-8') as f:
+                    npc_data = json.load(f)
+                npc_data["Cash"] = cash
+                with open(npc_json_path, 'w', encoding='utf-8') as f:
+                    json.dump(npc_data, f, indent=4)
+            except ValueError:
+                QMessageBox.warning(self, "Invalid Cash", "Cash must be an integer.")
+                return
+
+        QMessageBox.information(self, "Success", f"Inventory and cash for {dealer_name} saved successfully!")
+        self.main_window.backups_tab.refresh_backup_list()
+
+class VehiclesInventoryTab(QWidget):
+    def __init__(self, parent=None, main_window=None):
+        super().__init__(parent)
+        self.main_window = main_window
+        layout = QVBoxLayout()
+
+        # Vehicle selection dropdown
+        self.vehicle_combo = QComboBox()
+        self.vehicle_combo.currentIndexChanged.connect(self.load_vehicle_inventory)
+        layout.addWidget(QLabel("Select Vehicle:"))
+        layout.addWidget(self.vehicle_combo)
+
+        # Inventory table
+        self.inventory_table = QTableWidget()
+        self.inventory_table.setColumnCount(5)
+        self.inventory_table.setHorizontalHeaderLabels(["Item Type", "ID", "Quantity", "Quality", "PackagingID"])
+        self.inventory_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.inventory_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.inventory_table.setEditTriggers(QTableWidget.DoubleClicked | QTableWidget.EditKeyPressed)
+        self.inventory_table.itemChanged.connect(self.on_item_changed)
+        self.inventory_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        layout.addWidget(self.inventory_table, 1)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        insert_button = QPushButton("Insert Row")
+        insert_button.clicked.connect(self.insert_row)
+        delete_button = QPushButton("Delete Selected Row")
+        delete_button.clicked.connect(self.delete_selected_row)
+        save_button = QPushButton("Save Changes for this Vehicle")
+        save_button.clicked.connect(self.save_changes)
+        button_layout.addWidget(insert_button)
+        button_layout.addWidget(delete_button)
+        button_layout.addWidget(save_button)
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+        self.load_vehicles()
+
+    def load_vehicles(self):
+        """Populate the vehicle dropdown with available vehicles."""
+        if not self.main_window.manager.current_save:
+            return
+        vehicles_path = self.main_window.manager.current_save / "OwnedVehicles"
+        if not vehicles_path.exists():
+            return
+        vehicles = [d.name for d in vehicles_path.iterdir() if d.is_dir()]
+        self.vehicle_combo.clear()
+        self.vehicle_combo.addItems(vehicles)
+
+    def load_vehicle_inventory(self):
+        """Load the selected vehicle's inventory into the table."""
+        vehicle_name = self.vehicle_combo.currentText()
+        if not vehicle_name:
+            return
+        contents_path = self.main_window.manager.current_save / "OwnedVehicles" / vehicle_name / "Contents.json"
+        if contents_path.exists():
+            with open(contents_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            items = data.get("Items", [])
+        else:
+            items = []
+        self.display_inventory(items)
+
+    def display_inventory(self, items):
+        """Display the inventory in the table with all text fields editable."""
+        self.inventory_table.blockSignals(True)
+        self.inventory_table.setRowCount(0)
+        for item_str in items:
+            try:
+                item = json.loads(item_str)
+                item_type = item.get("DataType", "Unknown")
+                item_id = item.get("ID", "Unknown")
+                quantity = str(item.get("Quantity", 0))
+                quality = item.get("Quality", "")
+                packaging = item.get("PackagingID", "")
+                row = self.inventory_table.rowCount()
+                self.inventory_table.insertRow(row)
+
+                # Item Type (editable)
+                type_item = QTableWidgetItem(item_type)
+                self.inventory_table.setItem(row, 0, type_item)
+
+                # ID (editable)
+                id_item = QTableWidgetItem(item_id)
+                self.inventory_table.setItem(row, 1, id_item)
+
+                # Quantity (editable)
+                quantity_item = QTableWidgetItem(quantity)
+                quantity_item.setData(Qt.UserRole, item_str)
+                self.inventory_table.setItem(row, 2, quantity_item)
+
+                # Quality (dropdown or N/A based on Item Type)
+                if item_type in ("WeedData", "CocaineData", "MethData"):
+                    quality_combo = QComboBox()
+                    quality_combo.addItems(["Trash", "Poor", "Standard", "Premium", "Heavenly"])
+                    quality_combo.setCurrentText(quality if quality else "Standard")
+                    quality_combo.currentTextChanged.connect(
+                        lambda text, r=row: self.update_item_json(r, "Quality", text)
+                    )
+                    self.inventory_table.setCellWidget(row, 3, quality_combo)
+                else:
+                    quality_item = QTableWidgetItem("N/A")
+                    quality_item.setFlags(quality_item.flags() & ~Qt.ItemIsEditable)
+                    self.inventory_table.setItem(row, 3, quality_item)
+
+                # PackagingID (dropdown or N/A based on Item Type)
+                if item_type in ("WeedData", "CocaineData", "MethData"):
+                    packaging_combo = QComboBox()
+                    packaging_combo.addItems(["none", "baggie", "jar"])
+                    packaging_combo.setCurrentText(packaging if packaging else "none")
+                    packaging_combo.currentTextChanged.connect(
+                        lambda text, r=row: self.update_item_json(r, "PackagingID", text)
+                    )
+                    self.inventory_table.setCellWidget(row, 4, packaging_combo)
+                else:
+                    packaging_item = QTableWidgetItem("N/A")
+                    packaging_item.setFlags(packaging_item.flags() & ~Qt.ItemIsEditable)
+                    self.inventory_table.setItem(row, 4, packaging_item)
+            except json.JSONDecodeError:
+                continue
+        self.inventory_table.blockSignals(False)
+
+    def on_item_changed(self, item):
+        row = item.row()
+        column = item.column()
+        if column in (0, 1, 2):
+            field = ["DataType", "ID", "Quantity"][column]
+            value = item.text()
+            if column == 2:
+                try:
+                    value = int(value)
+                except ValueError:
+                    QMessageBox.warning(self, "Invalid Quantity", "Quantity must be an integer.")
+                    item.setText("0")
+                    return
+            self.update_item_json(row, field, value)
+            if column == 0:
+                self.update_quality_packaging_cells(row, value)
+
+    def update_quality_packaging_cells(self, row, item_type):
+        """Update Quality and PackagingID cells based on the new Item Type."""
+        for col in (3, 4):
+            self.inventory_table.removeCellWidget(row, col)
+            self.inventory_table.setItem(row, col, None)
+        if item_type in ("WeedData", "CocaineData", "MethData"):
+            quality_combo = QComboBox()
+            quality_combo.addItems(["Trash", "Poor", "Standard", "Premium", "Heavenly"])
+            quality_combo.setCurrentText("Standard")
+            quality_combo.currentTextChanged.connect(
+                lambda text, r=row: self.update_item_json(r, "Quality", text)
+            )
+            self.inventory_table.setCellWidget(row, 3, quality_combo)
+            packaging_combo = QComboBox()
+            packaging_combo.addItems(["none", "baggie", "jar"])
+            packaging_combo.setCurrentText("none")
+            packaging_combo.currentTextChanged.connect(
+                lambda text, r=row: self.update_item_json(r, "PackagingID", text)
+            )
+            self.inventory_table.setCellWidget(row, 4, packaging_combo)
+        else:
+            for col in (3, 4):
+                na_item = QTableWidgetItem("N/A")
+                na_item.setFlags(na_item.flags() & ~Qt.ItemIsEditable)
+                self.inventory_table.setItem(row, col, na_item)
+        quantity_item = self.inventory_table.item(row, 2)
+        if quantity_item is not None:
+            item_str = quantity_item.data(Qt.UserRole)
+            if item_str is not None:
+                try:
+                    item = json.loads(item_str)
+                    if item_type in ("WeedData", "CocaineData", "MethData"):
+                        if "Quality" not in item:
+                            item["Quality"] = "Standard"
+                        if "PackagingID" not in item:
+                            item["PackagingID"] = "none"
+                    else:
+                        item.pop("Quality", None)
+                        item.pop("PackagingID", None)
+                    new_item_str = json.dumps(item)
+                    quantity_item.setData(Qt.UserRole, new_item_str)
+                except json.JSONDecodeError:
+                    pass
+
+    def update_item_json(self, row, field, value):
+        """Update the item's JSON data with the new field value."""
+        quantity_item = self.inventory_table.item(row, 2)
+        if quantity_item is None:
+            return
+        item_str = quantity_item.data(Qt.UserRole)
+        if item_str is None:
+            return
+        try:
+            item = json.loads(item_str)
+            item[field] = value
+            new_item_str = json.dumps(item)
+            quantity_item.setData(Qt.UserRole, new_item_str)
+        except json.JSONDecodeError:
+            QMessageBox.warning(self, "Error", "Invalid item data")
+
+    def insert_row(self):
+        """Insert a new row with default values."""
+        self.inventory_table.blockSignals(True)
+        row = self.inventory_table.rowCount()
+        self.inventory_table.insertRow(row)
+        item = {"DataType": "ItemData", "ID": "new_item", "Quantity": 1}
+        item_str = json.dumps(item)
+        self.inventory_table.setItem(row, 0, QTableWidgetItem("ItemData"))
+        self.inventory_table.setItem(row, 1, QTableWidgetItem("new_item"))
+        quantity_item = QTableWidgetItem("1")
+        quantity_item.setData(Qt.UserRole, item_str)
+        self.inventory_table.setItem(row, 2, quantity_item)
+        for col in (3, 4):
+            na_item = QTableWidgetItem("N/A")
+            na_item.setFlags(na_item.flags() & ~Qt.ItemIsEditable)
+            self.inventory_table.setItem(row, col, na_item)
+        self.inventory_table.blockSignals(False)
+
+    def delete_selected_row(self):
+        selected = self.inventory_table.selectedItems()
+        if selected:
+            row = selected[0].row()
+            self.inventory_table.blockSignals(True)
+            self.inventory_table.removeRow(row)
+            self.inventory_table.blockSignals(False)
+        else:
+            QMessageBox.warning(self, "No Selection", "Please select a row to delete.")
+
+    def save_changes(self):
+        """Save the updated inventory to the vehicle's Contents.json file."""
+        vehicle_name = self.vehicle_combo.currentText()
+        if not vehicle_name:
+            return
+        contents_path = self.main_window.manager.current_save / "OwnedVehicles" / vehicle_name / "Contents.json"
+        self.main_window.manager.create_feature_backup("Vehicles", [contents_path.parent])
+        items = [self.inventory_table.item(row, 2).data(Qt.UserRole) for row in range(self.inventory_table.rowCount())]
+        data = {
+            "DataType": "InventoryData",
+            "DataVersion": 0,
+            "GameVersion": "0.3.3f11",
+            "Items": items
+        }
+        with open(contents_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
+        QMessageBox.information(self, "Success", f"Inventory for {vehicle_name} saved successfully!")
+        self.main_window.backups_tab.refresh_backup_list()
+
 class SaveEditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Schedule I Save Editor")
         self.setGeometry(100, 100, 800, 600)
+        self.center_window()
+
+    def center_window(self):
+        """Center the window on the screen."""
+        frame_geo = self.frameGeometry()
+        screen_center = self.screen().availableGeometry().center()
+        frame_geo.moveCenter(screen_center)
+        self.move(frame_geo.topLeft())
         self.manager = SaveManager()  # Assume SaveManager is defined elsewhere
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
-
-        def resource_path(relative_path):
-            """ Get absolute path to resource, works for dev and for PyInstaller """
-            try:
-                # PyInstaller creates a temp folder and stores path in _MEIPASS
-                base_path = sys._MEIPASS
-            except Exception:
-                base_path = os.path.abspath(".")
-
-            return os.path.join(base_path, relative_path)
-
-        # Then set the icon using:
-        self.setWindowIcon(QIcon(resource_path("icon.ico")))
 
         # Create pages
         self.save_selection_page = self.create_save_selection_page()
@@ -2220,7 +2966,9 @@ class SaveEditorWindow(QMainWindow):
         self.unlocks_tab = UnlocksTab(main_window=self)
         self.misc_tab = MiscTab(main_window=self)
         self.npcs_tab = NPCsTab(main_window=self)
-        self.backups_tab = BackupsTab(main_window=self)  # Add BackupsTab
+        self.backups_tab = BackupsTab(main_window=self)
+        self.dealers_inventory_tab = DealersInventoryTab(main_window=self)
+        self.vehicles_inventory_tab = VehiclesInventoryTab(main_window=self)  # Add new tab
 
         tab_widget.addTab(self.money_tab, "Money")
         tab_widget.addTab(self.rank_tab, "Rank")
@@ -2229,7 +2977,9 @@ class SaveEditorWindow(QMainWindow):
         tab_widget.addTab(self.unlocks_tab, "Unlocks")
         tab_widget.addTab(self.misc_tab, "Misc")
         tab_widget.addTab(self.npcs_tab, "NPCs")
-        tab_widget.addTab(self.backups_tab, "Backups")  # Add to tab widget
+        tab_widget.addTab(self.backups_tab, "Backups")
+        tab_widget.addTab(self.dealers_inventory_tab, "Dealers Inventory")
+        tab_widget.addTab(self.vehicles_inventory_tab, "Vehicles Inventory")  # Add to tab widget
 
         layout.addWidget(tab_widget)
 
@@ -2260,38 +3010,50 @@ class SaveEditorWindow(QMainWindow):
         self.misc_tab.update_vars_warning() 
         self.properties_tab.load_property_types()
         self.backups_tab.refresh_backup_list()
+        self.dealers_inventory_tab.load_dealers()
+        self.vehicles_inventory_tab.load_vehicles()
+        self.misc_tab.load_save_folders()
 
     def apply_changes(self):
-        try:
-            money_data = self.money_tab.get_data()
-            rank_data = self.rank_tab.get_data()
-            misc_data = self.misc_tab.get_data()
+            try:
+                money_data = self.money_tab.get_data()
+                rank_data = self.rank_tab.get_data()
+                misc_data = self.misc_tab.get_data()
 
-            # Backup stats files
-            stats_files = [
-                self.manager.current_save / "Money.json",
-                self.manager.current_save / "Rank.json",
-                self.manager.current_save / "Game.json",
-                self.manager.current_save / "Players/Player_0/Inventory.json"
-            ]
-            self.manager.create_feature_backup("Stats", stats_files)
-            self.backups_tab.refresh_backup_list()  # Add this line
+                # Backup stats files
+                stats_files = [
+                    self.manager.current_save / "Money.json",
+                    self.manager.current_save / "Rank.json",
+                    self.manager.current_save / "Game.json",
+                    self.manager.current_save / "Players/Player_0/Inventory.json"
+                ]
+                self.manager.create_feature_backup("Stats", stats_files)
+                self.backups_tab.refresh_backup_list()
 
-            self.manager.set_online_money(money_data["online_money"])
-            self.manager.set_networth(money_data["networth"])
-            self.manager.set_lifetime_earnings(money_data["lifetime_earnings"])
-            self.manager.set_weekly_deposit_sum(money_data["weekly_deposit_sum"])
-            self.manager.set_cash_balance(money_data["cash_balance"])
-            self.manager.set_rank(rank_data["current_rank"])
-            self.manager.set_rank_number(rank_data["rank_number"])
-            self.manager.set_tier(rank_data["tier"])
-            self.manager.set_organisation_name(misc_data["organisation_name"])
+                # Apply money changes
+                self.manager.set_online_money(money_data["online_money"])
+                self.manager.set_networth(money_data["networth"])
+                self.manager.set_lifetime_earnings(money_data["lifetime_earnings"])
+                self.manager.set_weekly_deposit_sum(money_data["weekly_deposit_sum"])
+                self.manager.set_cash_balance(money_data["cash_balance"])
 
-            QMessageBox.information(self, "Success", "Changes applied successfully!")
-            self.update_save_info_page()
-            self.stacked_widget.setCurrentWidget(self.save_info_page)
-        except ValueError:
-            QMessageBox.warning(self, "Invalid Input", "Please enter valid integer values.")
+                # Apply rank changes
+                self.manager.set_rank(rank_data["current_rank"])
+                self.manager.set_rank_number(rank_data["rank_number"])
+                self.manager.set_tier(rank_data["tier"])
+
+                # Apply misc changes
+                self.manager.set_organisation_name(misc_data["organisation_name"])
+                # Update ConsoleEnabled in Game.json
+                game_data = self.manager._load_json_file("Game.json")
+                game_data["ConsoleEnabled"] = misc_data["console_enabled"]
+                self.manager._save_json_file("Game.json", game_data)
+
+                QMessageBox.information(self, "Success", "Changes applied successfully!")
+                self.update_save_info_page()
+                self.stacked_widget.setCurrentWidget(self.save_info_page)
+            except ValueError:
+                QMessageBox.warning(self, "Invalid Input", "Please enter valid integer values.")
 
     def back_to_selection(self):
         """Refresh the save table and navigate back to the save selection page."""
