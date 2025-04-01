@@ -1,14 +1,6 @@
-import sys
-import json
-import os
-import random
-import string
-import shutil
-import tempfile
-import urllib.request
-import zipfile
-import winreg  # Added import
-import re
+# pyinstaller --noconfirm schedule1_editor.spec
+
+import sys, json, os, random, string, shutil, tempfile, urllib.request, zipfile, winreg, re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -19,7 +11,7 @@ from PySide6.QtWidgets import (
     QMessageBox, QTabWidget, QCheckBox, QGroupBox, QTextEdit, QHeaderView, QDialog
 )
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QRegularExpressionValidator, QIntValidator, QPalette, QColor, QDesktopServices
+from PySide6.QtGui import QRegularExpressionValidator, QIntValidator, QPalette, QColor, QDesktopServices, QIcon
 
 def find_steam_path():
     try:
@@ -2586,6 +2578,17 @@ class SaveEditorWindow(QMainWindow):
         self.setWindowTitle("Schedule I Save Editor")
         self.setGeometry(100, 100, 800, 600)
         self.center_window()
+
+        def icon_path(relative_path):
+            """ Get absolute path to resource, works for dev and for PyInstaller """
+            try:
+                # PyInstaller creates a temp folder and stores path in _MEIPASS
+                base_path = sys._MEIPASS
+            except Exception:
+                base_path = os.path.abspath(".")
+            return os.path.join(base_path, relative_path)
+        
+        self.setWindowIcon(QIcon(icon_path("icon.ico")))
 
     def center_window(self):
         """Center the window on the screen."""
