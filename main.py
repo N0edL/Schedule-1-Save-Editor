@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QUrl, QObject, Signal, QThread
 from PySide6.QtGui import QRegularExpressionValidator, QIntValidator, QPalette, QColor, QDesktopServices, QIcon
 
-CURRENT_VERSION = "1.0.3"
+CURRENT_VERSION = "1.0.4"
 
 class UpdateChecker(QObject):
     finished = Signal(tuple)  # Emits (latest_version, download_url) or ('', '') on failure
@@ -1032,8 +1032,8 @@ class FeatureRevertDialog(QDialog):
 
     def revert_all_changes(self):
         reply = QMessageBox.question(self, "Confirm Revert",
-                                     "This will revert ALL changes since the initial backup. Continue?",
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                                    "This will revert ALL changes since the initial backup. Continue?",
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             try:
                 self.manager.revert_all_changes()
