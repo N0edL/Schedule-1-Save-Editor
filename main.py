@@ -660,7 +660,7 @@ class SaveManager:
                 extract_path.mkdir()
                 
                 urllib.request.urlretrieve(
-                    "https://github.com/qwertyyuiopasdfghjklzxcvbnmqq/NPCs/raw/refs/heads/main/Properties.zip",
+                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/files/Properties.zip",
                     zip_path
                 )
                 
@@ -720,7 +720,7 @@ class SaveManager:
                 extract_path.mkdir()
                 
                 urllib.request.urlretrieve(
-                    "https://github.com/qwertyyuiopasdfghjklzxcvbnmqq/NPCs/raw/refs/heads/main/Businesses.zip",
+                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/files/Businesses.zip",
                     zip_path
                 )
                 
@@ -786,7 +786,7 @@ class SaveManager:
                 
                 # Download NPC template archive
                 urllib.request.urlretrieve(
-                    "https://github.com/qwertyyuiopasdfghjklzxcvbnmqq/NPCs/raw/refs/heads/main/NPCs.zip",
+                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/files/NPCs.zip",
                     str(zip_file)
                 )
 
@@ -2128,7 +2128,7 @@ class MiscTab(QWidget):
                 )
                 return
 
-            dll_url = "https://github.com/qwertyyuiopasdfghjklzxcvbnmqq/NPCs/raw/refs/heads/main/AchievementUnlocker.dll"
+            dll_url = "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/files/AchievementUnlocker.dll"
             dll_path = mods_dir / "AchievementUnlocker.dll"
 
             if dll_path.exists():
@@ -2175,7 +2175,7 @@ class MiscTab(QWidget):
             with tempfile.TemporaryDirectory() as temp_dir:
                 zip_path = Path(temp_dir) / "SaveGame_1.zip"
                 urllib.request.urlretrieve(
-                    "https://github.com/qwertyyuiopasdfghjklzxcvbnmqq/NPCs/raw/refs/heads/main/SaveGame_1.zip",
+                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/files/SaveGame_1.zip",
                     zip_path
                 )
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -2208,14 +2208,14 @@ class MiscTab(QWidget):
             self.main_window.populate_save_table()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate new save folder: {str(e)}")
- 
+
     def load_save_folders(self):
             """Populate the save folder combo box with available saves."""
             saves = self.main_window.manager.get_save_folders()
             self.save_folder_combo.clear()
             for save in saves:
                 self.save_folder_combo.addItem(save['name'], save['path'])
- 
+
     def delete_selected_save(self):
         # Get the selected save folder path from the combo box
         save_path = self.save_folder_combo.currentData()
@@ -2337,8 +2337,8 @@ class BackupsTab(QWidget):
     def revert_all_changes(self):
         """Revert all changes to the initial backup."""
         reply = QMessageBox.question(self, "Confirm Revert",
-                                     "This will revert ALL changes since the initial backup. Continue?",
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                                    "This will revert ALL changes since the initial backup. Continue?",
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             try:
                 self.main_window.manager.revert_all_changes()
@@ -2353,8 +2353,8 @@ class BackupsTab(QWidget):
             QMessageBox.critical(self, "Error", "No save file loaded")
             return
         reply = QMessageBox.question(self, "Confirm Delete",
-                                     "Delete all backups for this save?",
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                                    "Delete all backups for this save?",
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             try:
                 shutil.rmtree(self.main_window.manager.backup_path)
@@ -2717,7 +2717,6 @@ del "%~f0"
                 bat_file.write(bat_content)
                 bat_path = bat_file.name
 
-            # Execute batch script and exit
             subprocess.Popen(['cmd.exe', '/C', bat_path], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
             sys.exit()
 
@@ -2731,7 +2730,6 @@ del "%~f0"
                 if part.isdigit():
                     parts.append(int(part))
                 else:
-                    # Handle non-numeric parts by ignoring them
                     break
             return parts
         
