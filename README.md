@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
-![Version](https://img.shields.io/badge/version-1.0.3-green)
+![Version](https://img.shields.io/github/v/release/N0edL/Schedule-1-Save-Editor?display_name=release&label=version)
 ![PySide6](https://img.shields.io/badge/PySide6-GUI%20Framework-success)
 
 ## Overview
