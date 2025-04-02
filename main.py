@@ -2752,7 +2752,7 @@ del "%~f0"
 
     def check_first_run(self):
         """Check if this is the first run and open Discord invite if it is"""
-        config_dir = Path.home() / "AppData" / "Local" / "Schedule1Editor"
+        config_dir = Path.home() / "AppData" / "Local" / "noedl.xyz" / "Schedule1Editor"
         config_dir.mkdir(parents=True, exist_ok=True)
         flag_file = config_dir / "first_run.flag"
 
