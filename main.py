@@ -1,6 +1,6 @@
 # pyinstaller --noconfirm schedule1_editor.spec
 
-import sys, json, os, random, string, shutil, tempfile, urllib.request, zipfile, winreg, re
+import sys, json, os, random, string, shutil, tempfile, urllib.request, zipfile, winreg, re, subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -8,10 +8,34 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QStackedWidget, QWidget,
     QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QLabel, QFormLayout, QLineEdit, QComboBox, QPushButton,
-    QMessageBox, QTabWidget, QCheckBox, QGroupBox, QTextEdit, QHeaderView, QDialog
+    QMessageBox, QTabWidget, QCheckBox, QGroupBox, QTextEdit, QHeaderView, QDialog, QProgressDialog
 )
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, QObject, Signal, QThread
 from PySide6.QtGui import QRegularExpressionValidator, QIntValidator, QPalette, QColor, QDesktopServices, QIcon
+
+CURRENT_VERSION = "1.0.3"
+
+class UpdateChecker(QObject):
+    finished = Signal(tuple)  # Emits (latest_version, download_url) or ('', '') on failure
+
+    def run(self):
+        try:
+            url = "https://api.github.com/repos/N0edL/Schedule-1-Save-Editor/releases/latest"
+            req = urllib.request.Request(url)
+            req.add_header('User-Agent', 'Schedule-1-Save-Editor')
+            with urllib.request.urlopen(req) as response:
+                data = json.loads(response.read().decode())
+                latest_version = data.get('tag_name', '')
+                assets = data.get('assets', [])
+                download_url = None
+                for asset in assets:
+                    if asset['name'].lower().endswith('.exe'):
+                        download_url = asset.get('browser_download_url', '')
+                        break
+                self.finished.emit((latest_version, download_url))
+        except Exception as e:
+            print(f"Update check failed: {e}")
+            self.finished.emit(('', ''))
 
 def find_steam_path():
     try:
@@ -325,7 +349,7 @@ class SaveManager:
             data = {
                 "DataType": "ProductManagerData",
                 "DataVersion": 0,
-                "GameVersion": "0.3.3f11",
+                "GameVersion": "0.3.3f14",
                 "DiscoveredProducts": [],
                 "ListedProducts": [],
                 "ActiveMixOperation": {"ProductID": "", "IngredientID": ""},
@@ -361,7 +385,7 @@ class SaveManager:
             data = {
                 "DataType": "ProductManagerData",
                 "DataVersion": 0,
-                "GameVersion": "0.3.3f11",
+                "GameVersion": "0.3.3f14",
                 "DiscoveredProducts": [],
                 "ListedProducts": [],
                 "ActiveMixOperation": {"ProductID": "", "IngredientID": ""},
@@ -436,7 +460,7 @@ class SaveManager:
             product_data = {
                 "DataType": "WeedProductData",
                 "DataVersion": 0,
-                "GameVersion": "0.3.3f11",
+                "GameVersion": "0.3.3f14",
                 "Name": product_name,
                 "ID": product_key,  # Set "ID" to product_key
                 "DrugType": drug_type,
@@ -655,7 +679,7 @@ class SaveManager:
             missing_template = {
                 "DataType": "PropertyData",
                 "DataVersion": 0,
-                "GameVersion": "0.3.3f11",
+                "GameVersion": "0.3.3f14",
                 "PropertyCode": "",
                 "IsOwned": True,
                 "SwitchStates": [True, True, True, True],
@@ -715,7 +739,7 @@ class SaveManager:
             missing_template = {
                 "DataType": "BusinessData",
                 "DataVersion": 0,
-                "GameVersion": "0.3.3f11",
+                "GameVersion": "0.3.3f14",
                 "PropertyCode": "",
                 "IsOwned": True,
                 "SwitchStates": [True, True, True, True],
@@ -1891,7 +1915,7 @@ class InventoryTab(QWidget):
             npc_json_path = self.main_window.manager.current_save / "NPCs" / self.current_entity / "NPC.json"
             self.main_window.manager.create_feature_backup("NPCs", [inventory_path.parent])
             # Save inventory
-            inventory_data = {"DataType": "InventoryData", "DataVersion": 0, "GameVersion": "0.3.3f11", "Items": items}
+            inventory_data = {"DataType": "InventoryData", "DataVersion": 0, "GameVersion": "0.3.3f14", "Items": items}
             with open(inventory_path, 'w', encoding='utf-8') as f:
                 json.dump(inventory_data, f, indent=4)
             # Save cash
@@ -1910,7 +1934,7 @@ class InventoryTab(QWidget):
         elif self.current_type == "Vehicles":
             contents_path = self.main_window.manager.current_save / "OwnedVehicles" / self.current_entity / "Contents.json"
             self.main_window.manager.create_feature_backup("Vehicles", [contents_path.parent])
-            data = {"DataType": "InventoryData", "DataVersion": 0, "GameVersion": "0.3.3f11", "Items": items}
+            data = {"DataType": "InventoryData", "DataVersion": 0, "GameVersion": "0.3.3f14", "Items": items}
             with open(contents_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4)
         QMessageBox.information(self, "Success", f"Inventory for {self.current_entity} saved successfully!")
@@ -2545,24 +2569,29 @@ class CreditsTab(QWidget):
             credits_layout.addWidget(label)
 
         # Version Info
-        version = QLabel(f"Version: 1.0.3\nBuild Date: {datetime.now().strftime('%Y-%m-%d')}")
+        version = QLabel(f"Version: {CURRENT_VERSION}\nBuild Date: {datetime.now().strftime('%Y-%m-%d')}")
         version.setAlignment(Qt.AlignCenter)
         credits_layout.addWidget(version)
 
         # Repository Info
         repo_layout = QHBoxLayout()
         repo_layout.setContentsMargins(0, 10, 0, 0)
-        repo_layout.setSpacing(10)
+        repo_layout.setSpacing(10)  # Space between buttons
         
-        # Open button
-        repo_btn = QPushButton("Open GitHub")
-        repo_btn.setFixedWidth(100)
-        repo_btn.clicked.connect(lambda: QDesktopServices.openUrl(
-            QUrl("https://github.com/N0edL/Schedule-1-Save-Editor/tree/main")
-        ))
+        # Create buttons with consistent width
+        buttons = [
+            ("Join Discord", "https://discord.gg/32r68Qm5Ba", 100),
+            ("GitHub", "https://github.com/N0edL/Schedule-1-Save-Editor/tree/main", 100),
+            ("Nexus Mods", "https://www.nexusmods.com/schedule1/mods/81", 100)
+        ]
 
+        # Add buttons with spacing
         repo_layout.addStretch()
-        repo_layout.addWidget(repo_btn)
+        for text, url, width in buttons:
+            btn = QPushButton(text)
+            btn.setFixedWidth(width)
+            btn.clicked.connect(lambda _, u=url: QDesktopServices.openUrl(QUrl(u)))
+            repo_layout.addWidget(btn)
         repo_layout.addStretch()
 
         credits_layout.addLayout(repo_layout)
@@ -2589,7 +2618,9 @@ class SaveEditorWindow(QMainWindow):
             return os.path.join(base_path, relative_path)
         
         self.setWindowIcon(QIcon(icon_path("icon.ico")))
-
+        self.check_for_updates() 
+        self.check_first_run()
+        
     def center_window(self):
         """Center the window on the screen."""
         frame_geo = self.frameGeometry()
@@ -2613,6 +2644,122 @@ class SaveEditorWindow(QMainWindow):
         # Populate the save table initially and set the initial page
         self.populate_save_table()
         self.stacked_widget.setCurrentWidget(self.save_selection_page)
+
+    def check_for_updates(self):
+        self.update_thread = QThread()
+        self.update_worker = UpdateChecker()
+        self.update_worker.moveToThread(self.update_thread)
+        self.update_thread.started.connect(self.update_worker.run)
+        self.update_worker.finished.connect(self.handle_update_result)
+        self.update_worker.finished.connect(self.update_thread.quit)
+        self.update_worker.finished.connect(self.update_worker.deleteLater)
+        self.update_thread.finished.connect(self.update_thread.deleteLater)
+        self.update_thread.start()
+
+    def handle_update_result(self, result):
+        latest_version, download_url = result
+        if not latest_version or not download_url:
+            return
+
+        latest_clean = latest_version.lstrip('v')
+        current_clean = CURRENT_VERSION.lstrip('v')
+
+        if self.compare_versions(latest_clean, current_clean) > 0:
+            reply = QMessageBox.question(
+                self,
+                "Update Available",
+                f"New version {latest_version} is available (Current: {CURRENT_VERSION}).\nWould you like to update now?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply == QMessageBox.Yes:
+                self.download_and_apply_update(download_url)
+
+    def download_and_apply_update(self, download_url):
+        if not getattr(sys, 'frozen', False):
+            QMessageBox.information(self, "Info", "Auto-update is only supported in the packaged executable.")
+            return
+
+        try:
+            # Download the new executable
+            downloads_dir = Path.home() / "Downloads"
+            downloaded_exe = downloads_dir / os.path.basename(download_url)
+            
+            # Show download progress
+            progress = QProgressDialog("Downloading update...", "Cancel", 0, 100, self)
+            progress.setWindowTitle("Updating")
+            progress.setWindowModality(Qt.WindowModal)
+            
+            def update_progress(count, block_size, total_size):
+                percent = (count * block_size * 100) // total_size
+                progress.setValue(percent)
+                if progress.wasCanceled():
+                    raise Exception("Download canceled")
+            
+            urllib.request.urlretrieve(download_url, downloaded_exe, update_progress)
+            progress.close()
+
+            # Create batch script
+            current_exe = sys.executable
+            current_dir = os.path.dirname(current_exe)
+            bat_content = f"""@echo off
+timeout /t 1 /nobreak >nul
+taskkill /IM "{os.path.basename(current_exe)}" /F >nul 2>&1
+del /F /Q "{current_exe}" >nul 2>&1
+copy /Y "{downloaded_exe}" "{current_exe}" >nul 2>&1
+start "" "{current_exe}"
+del "%~f0"
+"""
+            # Write batch file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.bat', delete=False, encoding='utf-8') as bat_file:
+                bat_file.write(bat_content)
+                bat_path = bat_file.name
+
+            # Execute batch script and exit
+            subprocess.Popen(['cmd.exe', '/C', bat_path], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            sys.exit()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Update Error", f"Failed to apply update: {str(e)}")
+
+    def compare_versions(self, v1, v2):
+        def parse_version(v):
+            parts = []
+            for part in v.split('.'):
+                if part.isdigit():
+                    parts.append(int(part))
+                else:
+                    # Handle non-numeric parts by ignoring them
+                    break
+            return parts
+        
+        parts1 = parse_version(v1)
+        parts2 = parse_version(v2)
+
+        for p1, p2 in zip(parts1, parts2):
+            if p1 > p2:
+                return 1
+            elif p1 < p2:
+                return -1
+
+        if len(parts1) > len(parts2):
+            return 1
+        elif len(parts1) < len(parts2):
+            return -1
+        return 0
+
+    def check_first_run(self):
+        """Check if this is the first run and open Discord invite if it is"""
+        config_dir = Path.home() / "AppData" / "Local" / "Schedule1Editor"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        flag_file = config_dir / "first_run.flag"
+
+        if not flag_file.exists():
+            # Create the flag file first to prevent multiple opens
+            flag_file.touch()
+            
+            # Open Discord invite in default browser
+            QDesktopServices.openUrl(QUrl("https://discord.gg/32r68Qm5Ba"))
 
     def create_save_selection_page(self):
             """Create the save selection page with a table and load button."""
