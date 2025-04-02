@@ -2553,6 +2553,7 @@ class CreditsTab(QWidget):
             "Lead Developers: Cry4pt, NoedL",
             "UI Design: Cry4pt",
             "API Design: NoedL",
+            "Achievement Unlocker: ArcturusS0",
             "Testing: Cry4pt, NoedL, Julefox",
             "Special Thanks:",
             "  - Schedule I Development Team",
