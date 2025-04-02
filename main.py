@@ -2550,8 +2550,9 @@ class CreditsTab(QWidget):
 
         # Contributors
         contributors = [
-            "Lead Developer: Cry4pt",
+            "Lead Developers: Cry4pt, NoedL",
             "UI Design: Cry4pt",
+            "API Design: NoedL",
             "Testing: Cry4pt, NoedL, Julefox",
             "Special Thanks:",
             "  - Schedule I Development Team",
