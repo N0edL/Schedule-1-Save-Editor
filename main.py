@@ -1,6 +1,6 @@
 # pyinstaller --noconfirm schedule1_editor.spec
 
-import sys, json, os, random, string, shutil, tempfile, urllib.request, zipfile, winreg, re, subprocess
+import sys, json, os, random, string, shutil, tempfile, urllib.request, zipfile, winreg, re, subprocess, psutil
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -13,10 +13,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QUrl, QObject, Signal, QThread
 from PySide6.QtGui import QRegularExpressionValidator, QIntValidator, QPalette, QColor, QDesktopServices, QIcon
 
-CURRENT_VERSION = "1.0.4"
+CURRENT_VERSION = "1.0.5"
 
 class UpdateChecker(QObject):
-    finished = Signal(tuple)  # Emits (latest_version, download_url) or ('', '') on failure
+    finished = Signal(tuple) 
 
     def run(self):
         try:
@@ -64,6 +64,16 @@ def find_game_directory():
         if game_dir.exists():
             return game_dir
     return None
+
+def is_game_running():
+    """Check if the game is running."""
+    try:
+        for proc in psutil.process_iter(['pid', 'name']):
+            if "Schedule I" in proc.info['name']:
+                return True
+    except Exception as e:
+        print(f"Error checking for running processes: {e}")
+    return False
 
 def parse_npc_log(log_text: str) -> list[tuple[str, str]]:
     """
@@ -3119,6 +3129,12 @@ del "%~f0"
 
     def show_edit_page(self):
         """Show the edit save page and update its data."""
+        if is_game_running():
+            QMessageBox.information(
+            self,
+            "Game Running",
+            "The game is currently running.\nEnsure you are on the main menu and not loaded in to a save before editing.",
+            )
         self.update_edit_save_page()
         self.backups_tab.refresh_backup_list()
         self.stacked_widget.setCurrentWidget(self.edit_save_page)
