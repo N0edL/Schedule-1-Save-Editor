@@ -973,6 +973,38 @@ class SaveManager:
                         continue
         return dealers
 
+    def get_plastic_pots(self, property_type: Optional[str] = None):
+        """Retrieve plastic pots filtered by property type if specified."""
+        plastic_pots = []
+        properties_path = self.current_save / "Properties"
+        if not properties_path.exists():
+            return plastic_pots
+        
+        # Get directories to process based on filter
+        prop_dirs = []
+        if property_type:
+            target_dir = properties_path / property_type
+            if target_dir.exists():
+                prop_dirs.append(target_dir)
+        else:
+            prop_dirs = [d for d in properties_path.iterdir() if d.is_dir()]
+        
+        for prop_dir in prop_dirs:
+            objects_path = prop_dir / "Objects"
+            if objects_path.exists():
+                for obj_dir in objects_path.iterdir():
+                    if obj_dir.is_dir() and obj_dir.name.startswith("plasticpot_"):
+                        data_path = obj_dir / "Data.json"
+                        if data_path.exists():
+                            with open(data_path, 'r', encoding='utf-8') as f:
+                                data = json.load(f)
+                            plastic_pots.append({
+                                'property_type': prop_dir.name,
+                                'object_id': obj_dir.name,
+                                'data': data
+                            })
+        return plastic_pots
+
 class FeatureRevertDialog(QDialog):
     def __init__(self, parent=None, manager=None):
         super().__init__(parent)
@@ -1112,57 +1144,59 @@ class PropertiesTab(QWidget):
         super().__init__(parent)
         self.main_window = main_window
         layout = QVBoxLayout()
-        
-        # Create form layout for input fields
+
+        self.properties_group = QGroupBox("Properties")
+        properties_layout = QVBoxLayout()
+
         form_layout = QFormLayout()
         form_layout.setVerticalSpacing(8)
         form_layout.setHorizontalSpacing(15)
         form_layout.setContentsMargins(5, 5, 5, 10)
 
-        # Property Type Selection
         self.property_combo = QComboBox()
+        self.property_combo.currentIndexChanged.connect(self.load_plastic_pots)  
         form_layout.addRow(QLabel("Property Type:"), self.property_combo)
-
-        # Quantity Input
         self.quantity_edit = QLineEdit()
         self.quantity_edit.setValidator(QIntValidator(0, 1000000))
-        self.quantity_edit.setFixedHeight(28)
         form_layout.addRow(QLabel("Quantity:"), self.quantity_edit)
-
-        # Quality Selection
         self.quality_combo = QComboBox()
         self.quality_combo.addItems(["Trash", "Poor", "Standard", "Premium", "Heavenly"])
-        self.quality_combo.setFixedHeight(28)
         form_layout.addRow(QLabel("Quality:"), self.quality_combo)
-
-        # Packaging Selection
         self.packaging_combo = QComboBox()
         self.packaging_combo.addItems(["none", "baggie", "jar"])
-        self.packaging_combo.setFixedHeight(28)
         form_layout.addRow(QLabel("Packaging:"), self.packaging_combo)
-
-        # Update Type Selection
         self.update_combo = QComboBox()
         self.update_combo.addItems(["both", "weed", "item"])
-        self.update_combo.setFixedHeight(28)
         form_layout.addRow(QLabel("Update Type:"), self.update_combo)
+        properties_layout.addLayout(form_layout)
 
-        layout.addLayout(form_layout)
-        
-        # Update Button with connection
         self.update_btn = QPushButton("Update Properties")
-        self.update_btn.setFixedHeight(32)
-        self.update_btn.clicked.connect(self.update_properties)  # Added connection
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
-        btn_layout.addWidget(self.update_btn)
-        btn_layout.addStretch()
-        layout.addLayout(btn_layout)
+        self.update_btn.clicked.connect(self.update_properties)
+        properties_layout.addWidget(self.update_btn)  # Corrected to add the update button to the layout
+
+        self.properties_group.setLayout(properties_layout)
+        layout.addWidget(self.properties_group)
+
+        self.plastic_pots_group = QGroupBox("Plastic Pots")
+        plastic_pots_layout = QVBoxLayout()
+
+        self.plastic_pots_table = QTableWidget()
+        self.plastic_pots_table.setColumnCount(6)
+        self.plastic_pots_table.setHorizontalHeaderLabels([
+            "Property Type", "Object ID", "SeedID", "QualityLevel", "GrowthProgress", "RemainingSoilUses"
+        ])
+        self.plastic_pots_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        plastic_pots_layout.addWidget(self.plastic_pots_table)
+        self.save_plastic_pots_btn = QPushButton("Save Plastic Pots Changes")
+        self.save_plastic_pots_btn.clicked.connect(self.save_plastic_pots_changes)
+        plastic_pots_layout.addWidget(self.save_plastic_pots_btn)
+
+        self.plastic_pots_group.setLayout(plastic_pots_layout)
+        layout.addWidget(self.plastic_pots_group)
 
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(15)
         self.setLayout(layout)
-        
         self.load_property_types()
 
     def load_property_types(self):
@@ -1187,7 +1221,7 @@ class PropertiesTab(QWidget):
             }
             
             # Add "all" option first
-            self.property_combo.addItem("all", "all")
+            self.property_combo.addItem("All Properties", "all")
             
             # Process each directory
             for dir_name in dirs:
@@ -1227,6 +1261,163 @@ class PropertiesTab(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to update properties: {str(e)}")
 
+    def load_plastic_pots(self):
+        self.plastic_pots_table.setRowCount(0)
+        selected_property = self.property_combo.currentData()
+        plastic_pots = self.main_window.manager.get_plastic_pots(
+            selected_property if selected_property != "all" else None
+        )
+        for pot in plastic_pots:
+            row = self.plastic_pots_table.rowCount()
+            self.plastic_pots_table.insertRow(row)
+            self.plastic_pots_table.setItem(row, 0, QTableWidgetItem(pot['property_type']))
+            self.plastic_pots_table.setItem(row, 1, QTableWidgetItem(pot['object_id']))
+            
+            # Access PlantData sub-object
+            plant_data = pot['data'].get("PlantData", {})
+            
+            # SeedID
+            seed_combo = QComboBox()
+            seed_options = ["ogkushseed", "sourdieselseed", "greencrackseed", "granddaddypurpleseed"]
+            seed_combo.addItems(seed_options)
+            current_seed = plant_data.get("SeedID", "")
+            if current_seed in seed_options:
+                seed_combo.setCurrentText(current_seed)
+            else:
+                seed_combo.setCurrentIndex(0)  # Default to first option if invalid
+            self.plastic_pots_table.setCellWidget(row, 2, seed_combo)
+            
+            # QualityLevel
+            quality_combo = QComboBox()
+            quality_labels = ["trash", "poor", "standard", "premium", "heavenly"]
+            quality_combo.addItems(quality_labels)
+            current_quality = plant_data.get("QualityLevel", 0.0)
+            quality_label = self.get_quality_label(current_quality)
+            if quality_label in quality_labels:
+                quality_combo.setCurrentText(quality_label)
+            else:
+                quality_combo.setCurrentText("standard")  # Default if unknown
+            self.plastic_pots_table.setCellWidget(row, 3, quality_combo)
+            
+            # GrowthProgress
+            growth_combo = QComboBox()
+            growth_labels = ["not grown", "abit grown", "medium grown", "near grown", "fully grown"]
+            growth_combo.addItems(growth_labels)
+            current_growth = plant_data.get("GrowthProgress", 0.0)
+            growth_label = self.get_growth_label(current_growth)
+            if growth_label in growth_labels:
+                growth_combo.setCurrentText(growth_label)
+            else:
+                growth_combo.setCurrentText("not grown")  # Default if unknown
+            self.plastic_pots_table.setCellWidget(row, 4, growth_combo)
+            
+            # RemainingSoilUses (still at root level)
+            remaining_uses = str(pot['data'].get("RemainingSoilUses", 0))
+            uses_edit = QLineEdit()
+            uses_edit.setValidator(QIntValidator(0, 999))
+            uses_edit.setText(remaining_uses)
+            self.plastic_pots_table.setCellWidget(row, 5, uses_edit)
+
+    def get_quality_label(self, value):
+            if 0.1 <= value <= 0.2:
+                return "trash"
+            elif 0.3 <= value <= 0.4:
+                return "poor"
+            elif 0.5 <= value <= 0.6:
+                return "standard"
+            elif 0.7 <= value <= 0.8:
+                return "premium"
+            elif 0.9 <= value <= 1.0:
+                return "heavenly"
+            else:
+                return "unknown"
+
+    def get_growth_label(self, value):
+        if 0.1 <= value <= 0.2:
+            return "not grown"
+        elif 0.3 <= value <= 0.4:
+            return "abit grown"
+        elif 0.5 <= value <= 0.6:
+            return "medium grown"
+        elif 0.7 <= value <= 0.8:
+            return "near grown"
+        elif 0.9 <= value <= 1.0:
+            return "fully grown"
+        else:
+            return "unknown"
+
+    def save_plastic_pots_changes(self):
+        for row in range(self.plastic_pots_table.rowCount()):
+            property_type = self.plastic_pots_table.item(row, 0).text()
+            object_id = self.plastic_pots_table.item(row, 1).text()
+            data_path = self.main_window.manager.current_save / "Properties" / property_type / "Objects" / object_id / "Data.json"
+            if not data_path.exists():
+                continue
+            
+            # Load the existing data
+            with open(data_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Clean up any incorrect root-level fields (optional but recommended)
+            for field in ["SeedID", "QualityLevel", "GrowthProgress"]:
+                if field in data:
+                    del data[field]
+            
+            # Ensure PlantData exists and update its fields
+            if "PlantData" not in data:
+                data["PlantData"] = {
+                    "DataType": "PlantData",
+                    "DataVersion": 0,
+                    "GameVersion": "0.3.3f14",
+                    "SeedID": "",
+                    "GrowthProgress": 0.0,
+                    "YieldLevel": 0.0,
+                    "QualityLevel": 0.0,
+                    "ActiveBuds": []
+                }
+            
+            # Update SeedID
+            seed_combo = self.plastic_pots_table.cellWidget(row, 2)
+            data["PlantData"]["SeedID"] = seed_combo.currentText()
+            
+            # Update QualityLevel
+            quality_combo = self.plastic_pots_table.cellWidget(row, 3)
+            quality_label = quality_combo.currentText()
+            quality_value = {
+                "trash": 0.15,
+                "poor": 0.35,
+                "standard": 0.55,
+                "premium": 0.75,
+                "heavenly": 0.95
+            }.get(quality_label, 0.0)
+            data["PlantData"]["QualityLevel"] = quality_value
+            
+            # Update GrowthProgress
+            growth_combo = self.plastic_pots_table.cellWidget(row, 4)
+            growth_label = growth_combo.currentText()
+            growth_value = {
+                "not grown": 0.15,
+                "abit grown": 0.35,
+                "medium grown": 0.55,
+                "near grown": 0.75,
+                "fully grown": 0.95
+            }.get(growth_label, 0.0)
+            data["PlantData"]["GrowthProgress"] = growth_value
+            
+            # Update RemainingSoilUses (still at root level)
+            uses_edit = self.plastic_pots_table.cellWidget(row, 5)
+            try:
+                remaining_uses = int(uses_edit.text())
+            except ValueError:
+                remaining_uses = 0
+            data["RemainingSoilUses"] = remaining_uses
+            
+            # Save the updated data
+            with open(data_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4)
+        
+        QMessageBox.information(self, "Success", "Plastic pots changes saved successfully!")
+
 class ProductsTab(QWidget):
     def __init__(self, parent=None, main_window=None):
         super().__init__(parent)
@@ -1255,13 +1446,11 @@ class ProductsTab(QWidget):
 
         # Discover button
         discover_button = QPushButton("Discover Selected")
-        discover_button.setFixedHeight(32)
         discover_button.clicked.connect(self.discover_selected_products)
         buttons_layout.addWidget(discover_button)
 
         # Undiscover button
         undiscover_button = QPushButton("Undiscover Selected")
-        undiscover_button.setFixedHeight(32)
         undiscover_button.clicked.connect(self.undiscover_selected_products)
         buttons_layout.addWidget(undiscover_button)
 
@@ -1278,23 +1467,20 @@ class ProductsTab(QWidget):
 
         self.count_input = QLineEdit()
         self.count_input.setValidator(QIntValidator(1, 1000))
-        self.count_input.setFixedHeight(28)
 
         self.id_length_input = QLineEdit()
         self.id_length_input.setValidator(QIntValidator(5, 20))
-        self.id_length_input.setFixedHeight(28)
 
         self.price_input = QLineEdit()
         self.price_input.setValidator(QIntValidator(1, 1000000))
-        self.price_input.setFixedHeight(28)
 
         form_layout.addRow("Number of Products:", self.count_input)
         form_layout.addRow("ID Length:", self.id_length_input)
-        form_layout.addRow("Price ($):", self.price_input)
+        form_layout.addRow("Price:", self.price_input)
 
         self.drug_type_input = QLineEdit()
         self.drug_type_input.setValidator(QIntValidator(0, 2))  # Adjust range as needed
-        self.drug_type_input.setText("0")  # Default to 2
+        self.drug_type_input.setText("0")  # Default to 0
         form_layout.addRow("Drug Type:", self.drug_type_input)
 
         # Add after existing form elements
@@ -1318,27 +1504,25 @@ class ProductsTab(QWidget):
         self.add_to_favourited_checkbox = QCheckBox("Add to Favourited Products")
         form_layout.addRow("", self.add_to_favourited_checkbox)
 
-        generation_group.setLayout(form_layout)
-
-        # **Buttons for Generation**
+        # **Buttons for Generation** - Moved inside the form_layout
         button_layout = QHBoxLayout()
         generate_button = QPushButton("Generate Products")
-        generate_button.setFixedHeight(32)
         generate_button.clicked.connect(self.generate_products)
+        button_layout.addWidget(generate_button)
 
         reset_button = QPushButton("Reset Products")
-        reset_button.setFixedHeight(32)
         reset_button.clicked.connect(self.delete_generated_products)
-
-        button_layout.addStretch()
-        button_layout.addWidget(generate_button)
         button_layout.addWidget(reset_button)
-        button_layout.addStretch()
+
+        # Add the button layout to the form layout (inside the group box)
+        form_layout.addRow(button_layout)
+
+        generation_group.setLayout(form_layout)
 
         # Assemble main layout
         layout.addWidget(discovery_group)
         layout.addWidget(generation_group)
-        layout.addLayout(button_layout)
+        layout.addStretch()  # Optional: adds stretch to main layout if needed
         self.setLayout(layout)
 
     def discover_selected_products(self):
@@ -1517,7 +1701,6 @@ class UnlocksTab(QWidget):
 
         # Items and Weeds Section
         items_weeds_btn = QPushButton("Unlock All Items and Weeds")
-        items_weeds_btn.setFixedHeight(32)
         items_weeds_btn.clicked.connect(self.unlock_items_weeds)
         unlock_layout.addWidget(QLabel("Sets Rank & tier To 999 To Unlock All Items/Weeds:"))
         unlock_layout.addWidget(items_weeds_btn)
@@ -1525,7 +1708,6 @@ class UnlocksTab(QWidget):
 
         # Properties Section
         props_btn = QPushButton("Unlock All Properties")
-        props_btn.setFixedHeight(32)
         props_btn.clicked.connect(self.unlock_properties)
         unlock_layout.addWidget(QLabel("Downloads & Enables All Property Types:"))
         unlock_layout.addWidget(props_btn)
@@ -1533,14 +1715,12 @@ class UnlocksTab(QWidget):
 
         # Businesses Section
         business_btn = QPushButton("Unlock All Businesses")
-        business_btn.setFixedHeight(32)
         business_btn.clicked.connect(self.unlock_businesses)
         unlock_layout.addWidget(QLabel("Downloads & Enables All Business Types:"))
         unlock_layout.addWidget(business_btn)
 
         # Add NPC Relationships Section
         npc_relation_btn = QPushButton("Unlock All NPCs")
-        npc_relation_btn.setFixedHeight(32)
         npc_relation_btn.clicked.connect(self.update_npc_relationships)
         unlock_layout.addWidget(QLabel("Downloads & Updates All NPCs:"))
         unlock_layout.addWidget(npc_relation_btn)
@@ -1980,7 +2160,6 @@ class MiscTab(QWidget):
         quests_layout.setContentsMargins(10, 10, 10, 10)
         quests_layout.addWidget(QLabel("WARNING: This will mark all quests and objectives as completed"))
         self.complete_quests_btn = QPushButton("Complete All Quests")
-        self.complete_quests_btn.setFixedHeight(32)
         self.complete_quests_btn.clicked.connect(self.complete_all_quests)
         quests_layout.addWidget(self.complete_quests_btn)
         quests_group.setLayout(quests_layout)
@@ -1993,7 +2172,6 @@ class MiscTab(QWidget):
         self.vars_warning_label = QLabel()
         vars_layout.addWidget(self.vars_warning_label)
         self.vars_btn = QPushButton("Modify All Variables")
-        self.vars_btn.setFixedHeight(32)
         self.vars_btn.clicked.connect(self.modify_variables)
         vars_layout.addWidget(self.vars_btn)
         vars_group.setLayout(vars_layout)
@@ -2004,8 +2182,7 @@ class MiscTab(QWidget):
         mod_layout = QVBoxLayout()
         mod_layout.setContentsMargins(10, 10, 10, 10)
         mod_layout.addWidget(QLabel("WARNING: This unlock all the achievements in the game when you start up Schedule 1"))
-        self.install_mod_btn = QPushButton("Install AchievementUnlocker Mod")
-        self.install_mod_btn.setFixedHeight(32)
+        self.install_mod_btn = QPushButton("Install Achievement Unlocker Mod")
         self.install_mod_btn.clicked.connect(self.install_mod)
         mod_layout.addWidget(self.install_mod_btn)
         mod_group.setLayout(mod_layout)
@@ -2018,7 +2195,6 @@ class MiscTab(QWidget):
         self.new_org_name_input = QLineEdit()
         new_save_layout.addRow(QLabel("New Organization Name:"), self.new_org_name_input)
         self.generate_save_btn = QPushButton("Generate New Save Folder")
-        self.generate_save_btn.setFixedHeight(32)
         self.generate_save_btn.clicked.connect(self.generate_new_save)
         new_save_layout.addRow(self.generate_save_btn)
         new_save_group.setLayout(new_save_layout)
@@ -2948,16 +3124,16 @@ del "%~f0"
         self.stacked_widget.setCurrentWidget(self.edit_save_page)
 
     def update_edit_save_page(self):
-        """Update the edit save page with current save data."""
-        info = self.manager.get_save_info()
-        self.money_tab.set_data(info)
-        self.rank_tab.set_data(info)
-        self.misc_tab.set_data(info) 
-        self.misc_tab.update_vars_warning() 
-        self.properties_tab.load_property_types()
-        self.backups_tab.refresh_backup_list()
-        self.inventory_tab.refresh_data()
-        self.misc_tab.load_save_folders()
+            info = self.manager.get_save_info()
+            self.money_tab.set_data(info)
+            self.rank_tab.set_data(info)
+            self.misc_tab.set_data(info)
+            self.misc_tab.update_vars_warning()
+            self.properties_tab.load_property_types()
+            self.properties_tab.load_plastic_pots()
+            self.backups_tab.refresh_backup_list()
+            self.inventory_tab.refresh_data()
+            self.misc_tab.load_save_folders()
 
     def apply_changes(self):
             try:
