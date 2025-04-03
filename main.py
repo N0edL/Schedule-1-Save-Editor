@@ -660,7 +660,7 @@ class SaveManager:
                 extract_path.mkdir()
                 
                 urllib.request.urlretrieve(
-                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/files/Properties.zip",
+                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/NPCs/Properties.zip",
                     zip_path
                 )
                 
@@ -720,7 +720,7 @@ class SaveManager:
                 extract_path.mkdir()
                 
                 urllib.request.urlretrieve(
-                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/files/Businesses.zip",
+                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/NPCs/Businesses.zip",
                     zip_path
                 )
                 
@@ -786,7 +786,7 @@ class SaveManager:
                 
                 # Download NPC template archive
                 urllib.request.urlretrieve(
-                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/files/NPCs.zip",
+                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/NPCs/NPCs.zip",
                     str(zip_file)
                 )
 
@@ -2029,12 +2029,12 @@ class MiscTab(QWidget):
         self.vars_warning_label.setText("WARNING: Modifies variables in:\n- Variables/\n- Players/Player_*/Variables/")
 
     def set_data(self, info):
-            """Populate the input fields with data from the info dictionary."""
-            self.organisation_name_input.setText(info.get("organisation_name", ""))
-            # Set Console Enabled state from Game.json
-            game_data = self.main_window.manager._load_json_file("Game.json")
-            console_enabled = game_data.get("ConsoleEnabled", False)
-            self.console_enabled_cb.setChecked(console_enabled)
+        """Populate the input fields with data from the info dictionary."""
+        self.organisation_name_input.setText(info.get("organisation_name", ""))
+        # Get ConsoleEnabled from Settings
+        game_data = self.main_window.manager._load_json_file("Game.json")
+        console_enabled = game_data.get("Settings", {}).get("ConsoleEnabled", False)
+        self.console_enabled_cb.setChecked(console_enabled)
 
     def get_data(self):
         """Retrieve data from the input fields."""
@@ -2042,7 +2042,7 @@ class MiscTab(QWidget):
             "organisation_name": self.organisation_name_input.text(),
             "console_enabled": self.console_enabled_cb.isChecked()
         }
-
+        
     def complete_all_quests(self):
         if not self.main_window or not self.main_window.manager.current_save:
             QMessageBox.critical(self, "Error", "No save file loaded")
@@ -2128,7 +2128,7 @@ class MiscTab(QWidget):
                 )
                 return
 
-            dll_url = "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/files/AchievementUnlocker.dll"
+            dll_url = "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/NPCs/AchievementUnlocker.dll"
             dll_path = mods_dir / "AchievementUnlocker.dll"
 
             if dll_path.exists():
@@ -2175,7 +2175,7 @@ class MiscTab(QWidget):
             with tempfile.TemporaryDirectory() as temp_dir:
                 zip_path = Path(temp_dir) / "SaveGame_1.zip"
                 urllib.request.urlretrieve(
-                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/files/SaveGame_1.zip",
+                    "https://github.com/N0edL/Schedule-1-Save-Editor/raw/refs/heads/main/NPCs/SaveGame_1.zip",
                     zip_path
                 )
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -2582,7 +2582,7 @@ class CreditsTab(QWidget):
         
         # Create buttons with consistent width
         buttons = [
-            ("Join Discord", "https://discord.gg/32r68Qm5Ba", 100),
+            ("Discord", "https://discord.gg/32r68Qm5Ba", 100),
             ("GitHub", "https://github.com/N0edL/Schedule-1-Save-Editor/tree/main", 100),
             ("Nexus Mods", "https://www.nexusmods.com/schedule1/mods/81", 100)
         ]
@@ -2670,7 +2670,7 @@ class SaveEditorWindow(QMainWindow):
             reply = QMessageBox.question(
                 self,
                 "Update Available",
-                f"New version {latest_version} is available (Current: {CURRENT_VERSION}).\nWould you like to update now?",
+                f"New version {latest_version} is available (Current: v{CURRENT_VERSION}).\nWould you like to update now?",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No
             )
@@ -2749,17 +2749,31 @@ del "%~f0"
         return 0
 
     def check_first_run(self):
-        """Check if this is the first run and open Discord invite if it is"""
+        # Define the config directory in AppData
         config_dir = Path.home() / "AppData" / "Local" / "noedl.xyz" / "Schedule1Editor"
         config_dir.mkdir(parents=True, exist_ok=True)
         flag_file = config_dir / "first_run.flag"
 
+        # Check if this is the first run
         if not flag_file.exists():
-            # Create the flag file first to prevent multiple opens
-            flag_file.touch()
+            # Show a dialog asking the user if they want to join Discord
+            reply = QMessageBox.question(
+                self,
+                "Discord",
+                "Would you like to join the Schedule I Save Editor Discord server?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No  # Default to "No"
+            )
             
-            # Open Discord invite in default browser
-            QDesktopServices.openUrl(QUrl("https://discord.gg/32r68Qm5Ba"))
+            # If the user clicks "Yes", open the Discord invite
+            if reply == QMessageBox.Yes:
+                QDesktopServices.openUrl(QUrl("https://discord.gg/32r68Qm5Ba"))
+            
+            # Create the flag file after the user's choice
+            try:
+                flag_file.touch()
+            except Exception as e:
+                print(f"Warning: Could not create first_run.flag: {e}")
 
     def create_save_selection_page(self):
             """Create the save selection page with a table and load button."""
@@ -2973,11 +2987,13 @@ del "%~f0"
                 self.manager.set_rank_number(rank_data["rank_number"])
                 self.manager.set_tier(rank_data["tier"])
 
-                # Apply misc changes
                 self.manager.set_organisation_name(misc_data["organisation_name"])
-                # Update ConsoleEnabled in Game.json
+                
+                # Update ConsoleEnabled in Game.json Settings
                 game_data = self.manager._load_json_file("Game.json")
-                game_data["ConsoleEnabled"] = misc_data["console_enabled"]
+                # Ensure Settings dictionary exists
+                game_data.setdefault("Settings", {})
+                game_data["Settings"]["ConsoleEnabled"] = misc_data["console_enabled"]
                 self.manager._save_json_file("Game.json", game_data)
 
                 QMessageBox.information(self, "Success", "Changes applied successfully!")
