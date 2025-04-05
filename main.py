@@ -359,7 +359,7 @@ class SaveManager:
             data = {
                 "DataType": "ProductManagerData",
                 "DataVersion": 0,
-                "GameVersion": "0.3.3f14",
+                "GameVersion": "0.3.3f15",
                 "DiscoveredProducts": [],
                 "ListedProducts": [],
                 "ActiveMixOperation": {"ProductID": "", "IngredientID": ""},
@@ -395,7 +395,7 @@ class SaveManager:
             data = {
                 "DataType": "ProductManagerData",
                 "DataVersion": 0,
-                "GameVersion": "0.3.3f14",
+                "GameVersion": "0.3.3f15",
                 "DiscoveredProducts": [],
                 "ListedProducts": [],
                 "ActiveMixOperation": {"ProductID": "", "IngredientID": ""},
@@ -470,7 +470,7 @@ class SaveManager:
             product_data = {
                 "DataType": "WeedProductData",
                 "DataVersion": 0,
-                "GameVersion": "0.3.3f14",
+                "GameVersion": "0.3.3f15",
                 "Name": product_name,
                 "ID": product_key,  # Set "ID" to product_key
                 "DrugType": drug_type,
@@ -689,7 +689,7 @@ class SaveManager:
             missing_template = {
                 "DataType": "PropertyData",
                 "DataVersion": 0,
-                "GameVersion": "0.3.3f14",
+                "GameVersion": "0.3.3f15",
                 "PropertyCode": "",
                 "IsOwned": True,
                 "SwitchStates": [True, True, True, True],
@@ -749,7 +749,7 @@ class SaveManager:
             missing_template = {
                 "DataType": "BusinessData",
                 "DataVersion": 0,
-                "GameVersion": "0.3.3f14",
+                "GameVersion": "0.3.3f15",
                 "PropertyCode": "",
                 "IsOwned": True,
                 "SwitchStates": [True, True, True, True],
@@ -1378,7 +1378,7 @@ class PropertiesTab(QWidget):
                 data["PlantData"] = {
                     "DataType": "PlantData",
                     "DataVersion": 0,
-                    "GameVersion": "0.3.3f14",
+                    "GameVersion": "0.3.3f15",
                     "SeedID": "",
                     "GrowthProgress": 0.0,
                     "YieldLevel": 0.0,
@@ -2105,7 +2105,7 @@ class InventoryTab(QWidget):
             npc_json_path = self.main_window.manager.current_save / "NPCs" / self.current_entity / "NPC.json"
             self.main_window.manager.create_feature_backup("NPCs", [inventory_path.parent])
             # Save inventory
-            inventory_data = {"DataType": "InventoryData", "DataVersion": 0, "GameVersion": "0.3.3f14", "Items": items}
+            inventory_data = {"DataType": "InventoryData", "DataVersion": 0, "GameVersion": "0.3.3f15", "Items": items}
             with open(inventory_path, 'w', encoding='utf-8') as f:
                 json.dump(inventory_data, f, indent=4)
             # Save cash
@@ -2124,7 +2124,7 @@ class InventoryTab(QWidget):
         elif self.current_type == "Vehicles":
             contents_path = self.main_window.manager.current_save / "OwnedVehicles" / self.current_entity / "Contents.json"
             self.main_window.manager.create_feature_backup("Vehicles", [contents_path.parent])
-            data = {"DataType": "InventoryData", "DataVersion": 0, "GameVersion": "0.3.3f14", "Items": items}
+            data = {"DataType": "InventoryData", "DataVersion": 0, "GameVersion": "0.3.3f15", "Items": items}
             with open(contents_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4)
         QMessageBox.information(self, "Success", f"Inventory for {self.current_entity} saved successfully!")
